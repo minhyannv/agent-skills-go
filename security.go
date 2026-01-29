@@ -9,6 +9,7 @@ import (
 	"strings"
 )
 
+// normalizeAllowedDirs returns a sorted, deduplicated list of absolute directories.
 func normalizeAllowedDirs(allowedDirs []string) []string {
 	normalized := make([]string, 0, len(allowedDirs))
 	seen := map[string]struct{}{}

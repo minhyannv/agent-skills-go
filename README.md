@@ -7,6 +7,7 @@ Agent Skills Go is a Go-based interactive agent that discovers local skills and 
 - Interactive terminal chat loop with tool calling
 - Skill discovery via `SKILL.md` front matter
 - Built-in tools: `read_file`, `run_shell`, `run_python`, `run_go`
+- Inline code execution for shell, Python, and Go tools
 - Security controls: path validation, allowed directories, dangerous command filtering
 - Configurable via env vars and CLI flags
 - Optional streaming and verbose logging
@@ -116,29 +117,29 @@ Arguments:
 
 ### `run_shell`
 
-Run a shell command using `bash -lc`. Dangerous commands are blocked.
+Run a shell command or inline script using `bash -lc`. Dangerous commands are blocked.
 
 Arguments:
-- `command` (string, required)
+- `command` (string) or `code` (string). Provide exactly one.
 - `working_dir` (string, optional)
 - `timeout_seconds` (int, optional)
 
 ### `run_python`
 
-Run a Python script from a file path (requires `python3` or `python`).
+Run a Python script from a file path or inline code (requires `python3` or `python`).
 
 Arguments:
-- `path` (string, required)
+- `path` (string) or `code` (string). Provide exactly one.
 - `args` (string array, optional)
 - `working_dir` (string, optional)
 - `timeout_seconds` (int, optional)
 
 ### `run_go`
 
-Run a Go script from a file path (requires `go`).
+Run a Go script from a file path or inline code (requires `go`).
 
 Arguments:
-- `path` (string, required)
+- `path` (string) or `code` (string). Provide exactly one.
 - `args` (string array, optional)
 - `working_dir` (string, optional)
 - `timeout_seconds` (int, optional)
@@ -146,7 +147,7 @@ Arguments:
 ## Security Model
 
 - **Path validation** blocks traversal attempts (e.g., `../`).
-- **Allowed directories**: if `-allowed_dir` is set, all file and working directory operations must stay within that directory. The skills directory is also allowed so `SKILL.md` and skill scripts can be read/executed.
+- **Allowed directories**: if `-allowed_dir` is set, all file and working directory operations must stay within that directory. The skills directory is also allowed so `SKILL.md` and skill scripts can be read or executed.
 - **Dangerous command filtering** blocks destructive commands like `rm`, `dd`, and `mkfs`.
 
 ## Architecture

@@ -30,7 +30,7 @@ type ToolContext struct {
 	// AllowedDirs restricts file operations to one of these directories.
 	// When empty, no restriction is applied.
 	AllowedDirs []string
-	Ctx          context.Context
+	Ctx         context.Context
 }
 
 // Tools holds a collection of tools and provides execution.
@@ -49,13 +49,13 @@ func NewTools(ctx ToolContext) *Tools {
 
 	// Register all built-in tools
 	readFileTool := &ReadFileTool{ctx: ctx}
-	// writeFileTool := &WriteFileTool{ctx: ctx}
+	writeFileTool := &WriteFileTool{ctx: ctx}
 	runShellTool := &RunShellTool{ctx: ctx}
 	runPythonTool := &RunPythonTool{ctx: ctx}
 	runGoTool := &RunGoTool{ctx: ctx}
 
 	t.Register(readFileTool)
-	// t.Register(writeFileTool)
+	t.Register(writeFileTool)
 	t.Register(runShellTool)
 	t.Register(runPythonTool)
 	t.Register(runGoTool)

@@ -6,6 +6,7 @@ import (
 	"os"
 )
 
+// main is the program entry point.
 func main() {
 	log.SetFlags(0)
 

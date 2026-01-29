@@ -16,10 +16,12 @@ type ReadFileTool struct {
 	ctx ToolContext
 }
 
+// Name returns the tool name used by the model.
 func (t *ReadFileTool) Name() string {
 	return "read_file"
 }
 
+// Definition returns the OpenAI tool schema for read_file.
 func (t *ReadFileTool) Definition() openai.ChatCompletionToolParam {
 	return openai.ChatCompletionToolParam{
 		Function: openai.FunctionDefinitionParam{
@@ -29,10 +31,12 @@ func (t *ReadFileTool) Definition() openai.ChatCompletionToolParam {
 				"type": "object",
 				"properties": map[string]any{
 					"path": map[string]any{
-						"type": "string",
+						"type":        "string",
+						"description": "Path to the file on disk.",
 					},
 					"max_bytes": map[string]any{
-						"type": "integer",
+						"type":        "integer",
+						"description": "Maximum bytes to read (defaults to tool limit).",
 					},
 				},
 				"required": []string{"path"},
@@ -41,6 +45,7 @@ func (t *ReadFileTool) Definition() openai.ChatCompletionToolParam {
 	}
 }
 
+// Execute runs a read_file request.
 func (t *ReadFileTool) Execute(argText string) (string, error) {
 	var args struct {
 		Path     string `json:"path"`

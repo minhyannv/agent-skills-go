@@ -17,10 +17,12 @@ type WriteFileTool struct {
 	ctx ToolContext
 }
 
+// Name returns the tool name used by the model.
 func (t *WriteFileTool) Name() string {
 	return "write_file"
 }
 
+// Definition returns the OpenAI tool schema for write_file.
 func (t *WriteFileTool) Definition() openai.ChatCompletionToolParam {
 	return openai.ChatCompletionToolParam{
 		Function: openai.FunctionDefinitionParam{
@@ -30,13 +32,16 @@ func (t *WriteFileTool) Definition() openai.ChatCompletionToolParam {
 				"type": "object",
 				"properties": map[string]any{
 					"path": map[string]any{
-						"type": "string",
+						"type":        "string",
+						"description": "Path to write the file to.",
 					},
 					"content": map[string]any{
-						"type": "string",
+						"type":        "string",
+						"description": "Full file contents to write.",
 					},
 					"overwrite": map[string]any{
-						"type": "boolean",
+						"type":        "boolean",
+						"description": "Whether to overwrite if the file already exists.",
 					},
 				},
 				"required": []string{"path", "content"},
@@ -45,6 +50,7 @@ func (t *WriteFileTool) Definition() openai.ChatCompletionToolParam {
 	}
 }
 
+// Execute runs a write_file request.
 func (t *WriteFileTool) Execute(argText string) (string, error) {
 	var args struct {
 		Path      string `json:"path"`

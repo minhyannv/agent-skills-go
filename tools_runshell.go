@@ -16,37 +16,47 @@ type RunShellTool struct {
 	ctx ToolContext
 }
 
+// Name returns the tool name used by the model.
 func (t *RunShellTool) Name() string {
 	return "run_shell"
 }
 
+// Definition returns the OpenAI tool schema for run_shell.
 func (t *RunShellTool) Definition() openai.ChatCompletionToolParam {
 	return openai.ChatCompletionToolParam{
 		Function: openai.FunctionDefinitionParam{
 			Name:        "run_shell",
-			Description: openai.String("Run a shell script using bash"),
+			Description: openai.String("Run a shell command or inline script using bash"),
 			Parameters: openai.FunctionParameters{
 				"type": "object",
 				"properties": map[string]any{
 					"command": map[string]any{
-						"type": "string",
+						"type":        "string",
+						"description": "Shell command to run (use either command or code).",
+					},
+					"code": map[string]any{
+						"type":        "string",
+						"description": "Inline shell script to run (use either command or code).",
 					},
 					"working_dir": map[string]any{
-						"type": "string",
+						"type":        "string",
+						"description": "Working directory for the command.",
 					},
 					"timeout_seconds": map[string]any{
-						"type": "integer",
+						"type":        "integer",
+						"description": "Timeout in seconds before the command is terminated.",
 					},
 				},
-				"required": []string{"command"},
 			},
 		},
 	}
 }
 
+// Execute runs a run_shell request.
 func (t *RunShellTool) Execute(argText string) (string, error) {
 	var args struct {
 		Command        string `json:"command"`
+		Code           string `json:"code"`
 		WorkingDir     string `json:"working_dir"`
 		TimeoutSeconds int64  `json:"timeout_seconds"`
 	}
@@ -57,18 +67,26 @@ func (t *RunShellTool) Execute(argText string) (string, error) {
 		return marshalToolResponse("run_shell", nil, err)
 	}
 	if t.ctx.Verbose {
-		log.Printf("[verbose] run_shell: command=%s, working_dir=%s, timeout=%ds", args.Command, args.WorkingDir, args.TimeoutSeconds)
+		log.Printf("[verbose] run_shell: command=%s, code_bytes=%d, working_dir=%s, timeout=%ds", args.Command, len(args.Code), args.WorkingDir, args.TimeoutSeconds)
 	}
-	if args.Command == "" {
-		return marshalToolResponse("run_shell", nil, errors.New("command is required"))
+	if args.Command == "" && args.Code == "" {
+		return marshalToolResponse("run_shell", nil, errors.New("command or code is required"))
+	}
+	if args.Command != "" && args.Code != "" {
+		return marshalToolResponse("run_shell", nil, errors.New("provide either command or code, not both"))
+	}
+
+	command := args.Command
+	if args.Code != "" {
+		command = args.Code
 	}
 
 	// Check for dangerous commands
-	if isDangerousCommand(args.Command) {
+	if isDangerousCommand(command) {
 		if t.ctx.Verbose {
-			log.Printf("[verbose] run_shell: dangerous command blocked: %s", args.Command)
+			log.Printf("[verbose] run_shell: dangerous command blocked: %s", command)
 		}
-		return marshalToolResponse("run_shell", nil, fmt.Errorf("dangerous command not allowed: %s", args.Command))
+		return marshalToolResponse("run_shell", nil, fmt.Errorf("dangerous command not allowed: %s", command))
 	}
 
 	// Validate working directory
@@ -81,7 +99,7 @@ func (t *RunShellTool) Execute(argText string) (string, error) {
 	}
 
 	timeout := time.Duration(args.TimeoutSeconds) * time.Second
-	result := runCommand("bash", []string{"-lc", args.Command}, validatedWorkingDir, timeout, t.ctx.Verbose)
+	result := runCommand("bash", []string{"-lc", command}, validatedWorkingDir, timeout, t.ctx.Verbose)
 	if t.ctx.Verbose {
 		log.Printf("[verbose] run_shell: completed, exit_code=%d, duration=%dms", result.ExitCode, result.DurationMs)
 	}
