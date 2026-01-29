@@ -4,6 +4,7 @@ package main
 import (
 	"context"
 	"log"
+	"path/filepath"
 	"strings"
 
 	"github.com/openai/openai-go"
@@ -45,10 +46,23 @@ func NewApp(config *Config) (*App, error) {
 	ctx := context.Background()
 
 	// Create tool context
+	allowedDirs := []string{}
+	if strings.TrimSpace(config.AllowedDir) != "" {
+		allowedDirs = append(allowedDirs, config.AllowedDir)
+	}
+	if strings.TrimSpace(config.AllowedDir) != "" && strings.TrimSpace(config.SkillsDir) != "" {
+		// When -allowed_dir is set, also allow the skills directory so the model can
+		// read SKILL.md and run scripts shipped with skills.
+		if abs, err := filepath.Abs(config.SkillsDir); err == nil {
+			allowedDirs = append(allowedDirs, abs)
+		} else {
+			allowedDirs = append(allowedDirs, config.SkillsDir)
+		}
+	}
 	toolCtx := ToolContext{
 		MaxReadBytes: defaultMaxReadBytes,
 		Verbose:      config.Verbose,
-		AllowedDir:   config.AllowedDir,
+		AllowedDirs:  allowedDirs,
 		Ctx:          ctx,
 	}
 

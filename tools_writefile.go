@@ -65,7 +65,7 @@ func (t *WriteFileTool) Execute(argText string) (string, error) {
 	}
 
 	// Validate and sanitize path
-	validatedPath, err := validatePath(args.Path, t.ctx.AllowedDir)
+	validatedPath, err := validatePathWithAllowedDirs(args.Path, t.ctx.AllowedDirs)
 	if err != nil {
 		if t.ctx.Verbose {
 			log.Printf("[verbose] write_file: path validation failed: %v", err)

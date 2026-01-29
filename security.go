@@ -5,11 +5,36 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 )
 
-// validatePath ensures a path is safe and within allowed directory.
-func validatePath(path string, allowedDir string) (string, error) {
+func normalizeAllowedDirs(allowedDirs []string) []string {
+	normalized := make([]string, 0, len(allowedDirs))
+	seen := map[string]struct{}{}
+	for _, dir := range allowedDirs {
+		dir = strings.TrimSpace(dir)
+		if dir == "" {
+			continue
+		}
+		abs, err := filepath.Abs(dir)
+		if err != nil {
+			continue
+		}
+		abs = filepath.Clean(abs)
+		if _, ok := seen[abs]; ok {
+			continue
+		}
+		seen[abs] = struct{}{}
+		normalized = append(normalized, abs)
+	}
+	slices.Sort(normalized)
+	return normalized
+}
+
+// validatePathWithAllowedDirs ensures a path is safe and within one of the allowed directories.
+// If allowedDirs is empty, any path is permitted (backward compatibility).
+func validatePathWithAllowedDirs(path string, allowedDirs []string) (string, error) {
 	if path == "" {
 		return "", fmt.Errorf("path cannot be empty")
 	}
@@ -22,32 +47,35 @@ func validatePath(path string, allowedDir string) (string, error) {
 		return "", fmt.Errorf("path traversal not allowed: %s", path)
 	}
 
-	// If no allowed directory is set, allow any path (backward compatibility)
-	if allowedDir == "" {
-		absPath, err := filepath.Abs(cleanPath)
-		if err != nil {
-			return "", fmt.Errorf("invalid path: %w", err)
-		}
-		return absPath, nil
-	}
-
-	// Resolve absolute paths
 	absPath, err := filepath.Abs(cleanPath)
 	if err != nil {
 		return "", fmt.Errorf("invalid path: %w", err)
 	}
 
-	absAllowed, err := filepath.Abs(allowedDir)
-	if err != nil {
-		return "", fmt.Errorf("invalid allowed directory: %w", err)
+	roots := normalizeAllowedDirs(allowedDirs)
+	if len(roots) == 0 {
+		return absPath, nil
 	}
 
-	// Ensure the path is within the allowed directory
-	if !strings.HasPrefix(absPath, absAllowed) {
-		return "", fmt.Errorf("path outside allowed directory: %s (allowed: %s)", absPath, absAllowed)
+	for _, root := range roots {
+		rel, err := filepath.Rel(root, absPath)
+		if err != nil {
+			continue
+		}
+		if rel == "." || (!strings.HasPrefix(rel, ".."+string(filepath.Separator)) && rel != "..") {
+			return absPath, nil
+		}
 	}
 
-	return absPath, nil
+	return "", fmt.Errorf("path outside allowed directories: %s (allowed: %s)", absPath, strings.Join(roots, ", "))
+}
+
+// validatePath ensures a path is safe and within allowed directory.
+func validatePath(path string, allowedDir string) (string, error) {
+	if strings.TrimSpace(allowedDir) == "" {
+		return validatePathWithAllowedDirs(path, nil)
+	}
+	return validatePathWithAllowedDirs(path, []string{allowedDir})
 }
 
 // validateWorkingDir ensures a working directory is safe and within allowed directory.
@@ -57,6 +85,15 @@ func validateWorkingDir(workingDir string, allowedDir string) (string, error) {
 	}
 
 	return validatePath(workingDir, allowedDir)
+}
+
+// validateWorkingDirWithAllowedDirs ensures a working directory is safe and within allowed directories.
+func validateWorkingDirWithAllowedDirs(workingDir string, allowedDirs []string) (string, error) {
+	if workingDir == "" {
+		return "", nil // Empty working dir is allowed (uses current dir)
+	}
+
+	return validatePathWithAllowedDirs(workingDir, allowedDirs)
 }
 
 // dangerousCommands is a list of commands that should be restricted.

@@ -25,7 +25,7 @@ func TestToolReadWriteFile(t *testing.T) {
 	toolCtx := ToolContext{
 		MaxReadBytes: defaultMaxReadBytes,
 		Verbose:      false,
-		AllowedDir:   dir, // Set allowed dir to test directory
+		AllowedDirs:  []string{dir}, // Set allowed dir to test directory
 		Ctx:          context.Background(),
 	}
 	writeTool := &WriteFileTool{ctx: toolCtx}
@@ -86,7 +86,7 @@ func TestToolWriteFileNoOverwrite(t *testing.T) {
 	toolCtx := ToolContext{
 		MaxReadBytes: defaultMaxReadBytes,
 		Verbose:      false,
-		AllowedDir:   dir, // Set allowed dir to test directory
+		AllowedDirs:  []string{dir}, // Set allowed dir to test directory
 		Ctx:          context.Background(),
 	}
 	writeTool := &WriteFileTool{ctx: toolCtx}
@@ -115,7 +115,7 @@ func TestToolRunShell(t *testing.T) {
 	toolCtx := ToolContext{
 		MaxReadBytes: defaultMaxReadBytes,
 		Verbose:      false,
-		AllowedDir:   "", // No restriction for this test
+		AllowedDirs:  nil, // No restriction for this test
 		Ctx:          context.Background(),
 	}
 	shellTool := &RunShellTool{ctx: toolCtx}

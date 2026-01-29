@@ -168,7 +168,7 @@ func TestToolReadFileSecurity(t *testing.T) {
 	toolCtx := ToolContext{
 		MaxReadBytes: defaultMaxReadBytes,
 		Verbose:      false,
-		AllowedDir:   allowedDir,
+		AllowedDirs:  []string{allowedDir},
 		Ctx:          nil,
 	}
 	readTool := &ReadFileTool{ctx: toolCtx}
@@ -195,7 +195,7 @@ func TestToolRunShellSecurity(t *testing.T) {
 	toolCtx := ToolContext{
 		MaxReadBytes: defaultMaxReadBytes,
 		Verbose:      false,
-		AllowedDir:   "",
+		AllowedDirs:  nil,
 		Ctx:          nil,
 	}
 	shellTool := &RunShellTool{ctx: toolCtx}

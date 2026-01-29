@@ -24,7 +24,7 @@ func (t *RunShellTool) Definition() openai.ChatCompletionToolParam {
 	return openai.ChatCompletionToolParam{
 		Function: openai.FunctionDefinitionParam{
 			Name:        "run_shell",
-			Description: openai.String("Run a shell command or script using bash"),
+			Description: openai.String("Run a shell script using bash"),
 			Parameters: openai.FunctionParameters{
 				"type": "object",
 				"properties": map[string]any{
@@ -72,7 +72,7 @@ func (t *RunShellTool) Execute(argText string) (string, error) {
 	}
 
 	// Validate working directory
-	validatedWorkingDir, err := validateWorkingDir(args.WorkingDir, t.ctx.AllowedDir)
+	validatedWorkingDir, err := validateWorkingDirWithAllowedDirs(args.WorkingDir, t.ctx.AllowedDirs)
 	if err != nil {
 		if t.ctx.Verbose {
 			log.Printf("[verbose] run_shell: working directory validation failed: %v", err)
