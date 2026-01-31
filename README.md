@@ -6,7 +6,7 @@ Agent Skills Go is a Go-based interactive agent that discovers local skills and 
 
 - Interactive terminal chat loop with tool calling
 - Skill discovery via `SKILL.md` front matter
-- Built-in tools: `read_file`, `run_shell`, `run_python`, `run_go`
+- Built-in tools: `read_file`, `write_file`, `run_shell`, `run_python`, `run_go`
 - Inline code execution for shell, Python, and Go tools
 - Security controls: path validation, allowed directories, dangerous command filtering
 - Configurable via env vars and CLI flags
@@ -63,13 +63,13 @@ Type your message and press Enter. Commands:
 
 ### Command-line flags
 
-| Flag | Description | Default |
-|------|-------------|---------|
-| `-skills_dir` | Directory containing skills | `examples/skills` |
-| `-max_turns` | Max tool-call turns per user message | `20` |
-| `-stream` | Stream assistant output | `false` |
-| `-verbose` | Verbose tool-call logging | `false` |
-| `-allowed_dir` | Base directory for file operations (empty = no restriction) | `` |
+| Flag | Description | Default           |
+|------|-------------|-------------------|
+| `-skills_dir` | Directory containing skills | `./skills`        |
+| `-max_turns` | Max tool-call turns per user message | `10`              |
+| `-stream` | Stream assistant output | `false`           |
+| `-verbose` | Verbose tool-call logging | `false`           |
+| `-allowed_dir` | Base directory for file operations (empty = no restriction) | ``                |
 
 ### Environment variables
 
@@ -114,6 +114,15 @@ Read file contents with optional `max_bytes` (default limit is 1MB).
 Arguments:
 - `path` (string, required)
 - `max_bytes` (int, optional)
+
+### `write_file`
+
+Write content to a file on disk.
+
+Arguments:
+- `path` (string, required)
+- `content` (string, required)
+- `overwrite` (bool, optional) — when false, writing to an existing file returns an error
 
 ### `run_shell`
 

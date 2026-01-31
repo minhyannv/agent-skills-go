@@ -37,7 +37,7 @@ func ParseConfig() *Config {
 	// Parse command-line flags
 	var (
 		skillsDir  = flag.String("skills_dir", "./skills", "Directory containing skills")
-		maxTurns   = flag.Int("max_turns", 20, "Max tool-call turns")
+		maxTurns   = flag.Int("max_turns", 10, "Max tool-call turns")
 		stream     = flag.Bool("stream", false, "Stream assistant output")
 		verbose    = flag.Bool("verbose", false, "Verbose tool-call logging")
 		allowedDir = flag.String("allowed_dir", "", "Base directory for file operations (empty = no restriction, recommended for security)")
