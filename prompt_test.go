@@ -19,9 +19,13 @@ func TestToPromptMarkdown(t *testing.T) {
 	}
 	if !containsAll(md, []string{
 		"## Available Skills",
-		"**pdf**",
+		"<available_skills>",
+		"<name>",
+		"pdf",
+		"<description>",
 		"PDF tools",
-		"Location: /tmp/pdf/SKILL.md",
+		"<location>",
+		"/tmp/pdf/SKILL.md",
 	}) {
 		t.Fatalf("markdown missing expected content:\n%s", md)
 	}
@@ -39,6 +43,7 @@ func TestBuildSystemPrompt(t *testing.T) {
 	if !containsAll(prompt, []string{
 		"Tools available",
 		"Available Skills",
+		"Skill Selection Rules",
 		"xlsx",
 	}) {
 		t.Fatalf("prompt missing expected content:\n%s", prompt)
