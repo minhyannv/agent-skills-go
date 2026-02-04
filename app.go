@@ -28,7 +28,7 @@ func NewApp(config *Config) (*App, error) {
 	}
 
 	// Load skills
-	skills, err := LoadSkillsFromDir(config.SkillsDir)
+	skills, err := LoadSkillsFromDirs(config.SkillsDirs)
 	if err != nil {
 		log.Fatalf("load skills: %v", err)
 	}
@@ -50,13 +50,18 @@ func NewApp(config *Config) (*App, error) {
 	if strings.TrimSpace(config.AllowedDir) != "" {
 		allowedDirs = append(allowedDirs, config.AllowedDir)
 	}
-	if strings.TrimSpace(config.AllowedDir) != "" && strings.TrimSpace(config.SkillsDir) != "" {
-		// When -allowed_dir is set, also allow the skills directory so the model can
+	if strings.TrimSpace(config.AllowedDir) != "" {
+		// When -allowed_dir is set, also allow the skills directories so the model can
 		// read SKILL.md and run scripts shipped with skills.
-		if abs, err := filepath.Abs(config.SkillsDir); err == nil {
-			allowedDirs = append(allowedDirs, abs)
-		} else {
-			allowedDirs = append(allowedDirs, config.SkillsDir)
+		for _, dir := range config.SkillsDirs {
+			if strings.TrimSpace(dir) == "" {
+				continue
+			}
+			if abs, err := filepath.Abs(dir); err == nil {
+				allowedDirs = append(allowedDirs, abs)
+			} else {
+				allowedDirs = append(allowedDirs, dir)
+			}
 		}
 	}
 	toolCtx := ToolContext{

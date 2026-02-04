@@ -43,7 +43,7 @@ OPENAI_BASE_URL=https://api.openai.com/v1  # optional
 This repo includes a `skills/` directory. Point the app at it:
 
 ```bash
-go run . -skills_dir ./skills
+go run . -skills_dirs ./skills,../shared-skills
 ```
 
 You will enter interactive mode:
@@ -65,7 +65,7 @@ Type your message and press Enter. Commands:
 
 | Flag | Description | Default           |
 |------|-------------|-------------------|
-| `-skills_dir` | Directory containing skills | `./skills`        |
+| `-skills_dirs` | Comma-separated list of directories containing skills | `./skills`        |
 | `-max_turns` | Max tool-call turns per user message | `10`              |
 | `-stream` | Stream assistant output | `false`           |
 | `-verbose` | Verbose tool-call logging | `false`           |
@@ -81,7 +81,7 @@ Type your message and press Enter. Commands:
 
 ## Skills
 
-Skills are discovered by walking the skills directory and parsing `SKILL.md` files. Each file must include YAML front matter with at least a `name` field. Missing or invalid front matter will fail startup.
+Skills are discovered by walking the skills directories and parsing `SKILL.md` files. Each file must include YAML front matter with at least a `name` field. Missing or invalid front matter will fail startup.
 
 Example structure:
 
@@ -103,7 +103,7 @@ description: PDF processing and manipulation
 ---
 ```
 
-At startup, the system prompt includes a list of available skills and their `SKILL.md` locations. The assistant is instructed to open `SKILL.md` with `read_file` before using a skill.
+At startup, the system prompt includes a list of available skills and the full `SKILL.md` file path for each skill. The assistant is instructed to open `SKILL.md` with `read_file` before using a skill.
 
 ## Built-in Tools
 
@@ -156,7 +156,7 @@ Arguments:
 ## Security Model
 
 - **Path validation** blocks traversal attempts (e.g., `../`).
-- **Allowed directories**: if `-allowed_dir` is set, all file and working directory operations must stay within that directory. The skills directory is also allowed so `SKILL.md` and skill scripts can be read or executed.
+- **Allowed directories**: if `-allowed_dir` is set, all file and working directory operations must stay within that directory. The skills directories are also allowed so `SKILL.md` and skill scripts can be read or executed.
 - **Dangerous command filtering** blocks destructive commands like `rm`, `dd`, and `mkfs`.
 
 ## Architecture

@@ -55,6 +55,32 @@ func LoadSkillsFromDir(dir string) ([]*Skill, error) {
 	return skills, nil
 }
 
+// LoadSkillsFromDirs aggregates skills from multiple directories.
+func LoadSkillsFromDirs(dirs []string) ([]*Skill, error) {
+	var skills []*Skill
+	for _, dir := range dirs {
+		if strings.TrimSpace(dir) == "" {
+			continue
+		}
+		found, err := LoadSkillsFromDir(dir)
+		if err != nil {
+			return nil, err
+		}
+		skills = append(skills, found...)
+	}
+
+	sort.Slice(skills, func(i, j int) bool {
+		left := strings.ToLower(skills[i].Name)
+		right := strings.ToLower(skills[j].Name)
+		if left == right {
+			return strings.ToLower(skills[i].SkillFilePath) < strings.ToLower(skills[j].SkillFilePath)
+		}
+		return left < right
+	})
+
+	return skills, nil
+}
+
 // ParseSkillFile reads a SKILL.md file and extracts its metadata.
 func ParseSkillFile(path string) (*Skill, error) {
 	content, err := os.ReadFile(path)

@@ -9,7 +9,7 @@ import (
 // TestToPromptMarkdown validates markdown formatting of skills.
 func TestToPromptMarkdown(t *testing.T) {
 	skills := []*Skill{
-		{Name: "pdf", Description: "PDF tools", SkillFilePath: "/tmp/pdf/SKILL.md"},
+		{Name: "pdf", Description: "PDF tools", SkillFilePath: "/tmp/pdf"},
 		{Name: "docx", Description: "DOCX tools", SkillFilePath: "/tmp/docx/SKILL.md"},
 	}
 
@@ -26,6 +26,7 @@ func TestToPromptMarkdown(t *testing.T) {
 		"PDF tools",
 		"<location>",
 		"/tmp/pdf/SKILL.md",
+		"/tmp/docx/SKILL.md",
 	}) {
 		t.Fatalf("markdown missing expected content:\n%s", md)
 	}

@@ -12,7 +12,7 @@ import (
 // Config holds all application configuration from environment variables and command-line flags.
 type Config struct {
 	// Command-line flags
-	SkillsDir  string
+	SkillsDirs []string
 	MaxTurns   int
 	Stream     bool
 	Verbose    bool
@@ -36,7 +36,7 @@ func ParseConfig() *Config {
 
 	// Parse command-line flags
 	var (
-		skillsDir  = flag.String("skills_dir", "./skills", "Directory containing skills")
+		skillsDirs = flag.String("skills_dirs", "./skills", "Comma-separated list of directories containing skills")
 		maxTurns   = flag.Int("max_turns", 10, "Max tool-call turns")
 		stream     = flag.Bool("stream", false, "Stream assistant output")
 		verbose    = flag.Bool("verbose", false, "Verbose tool-call logging")
@@ -45,7 +45,7 @@ func ParseConfig() *Config {
 	flag.Parse()
 
 	return &Config{
-		SkillsDir:     *skillsDir,
+		SkillsDirs:    parseSkillsDirs(*skillsDirs),
 		MaxTurns:      *maxTurns,
 		Stream:        *stream,
 		Verbose:       *verbose,
@@ -54,4 +54,17 @@ func ParseConfig() *Config {
 		OpenAIBaseURL: baseURL,
 		OpenAIModel:   model,
 	}
+}
+
+func parseSkillsDirs(value string) []string {
+	parts := strings.Split(value, ",")
+	dirs := make([]string, 0, len(parts))
+	for _, part := range parts {
+		dir := strings.TrimSpace(part)
+		if dir == "" {
+			continue
+		}
+		dirs = append(dirs, dir)
+	}
+	return dirs
 }
