@@ -13,7 +13,7 @@ func BuildSystemPrompt(skills []*Skill) string {
 
 	// Core identity + tool surface
 	sb.WriteString("You are a tool-using assistant.")
-	sb.WriteString("\nTools available: read_file, write_file, run_shell, run_python, run_go.")
+	sb.WriteString("\nTools available: read_file, write_file, run_shell.")
 
 	// Skill selection policy (hardened)
 	sb.WriteString("\n\n## Skill Selection Rules")

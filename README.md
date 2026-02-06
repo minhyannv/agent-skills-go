@@ -7,8 +7,8 @@ tools. It reads skill documentation from `SKILL.md`, runs approved scripts, and 
 
 - Interactive terminal chat loop with tool calling
 - Skill discovery via `SKILL.md` front matter
-- Built-in tools: `read_file`, `write_file`, `run_shell`, `run_python`, `run_go`
-- Inline code execution for shell, Python, and Go tools
+- Built-in tools: `read_file`, `write_file`, `run_shell`
+- Command execution via `run_shell`
 - Security controls: path validation, allowed directories, dangerous command filtering
 - Configurable via env vars and CLI flags
 - Optional streaming and verbose logging
@@ -129,35 +129,18 @@ Arguments:
 
 ### `run_shell`
 
-Run a shell command using `bash -lc` or a script file using `bash`. Dangerous commands are blocked.
+Run a shell command using `bash -lc`. Dangerous commands are blocked.
 
 Arguments:
 
-- `command` (string) or `path` (string). Provide exactly one.
+- `command` (string)
 - `working_dir` (string, optional)
 - `timeout_seconds` (int, optional)
 
-### `run_python`
+Notes:
 
-Run a Python script from a file path or code (requires `python3` or `python`).
-
-Arguments:
-
-- `path` (string) or `code` (string). Provide exactly one.
-- `args` (string array, optional)
-- `working_dir` (string, optional)
-- `timeout_seconds` (int, optional)
-
-### `run_go`
-
-Run a Go script from a file path or code (requires `go`).
-
-Arguments:
-
-- `path` (string) or `code` (string). Provide exactly one.
-- `args` (string array, optional)
-- `working_dir` (string, optional)
-- `timeout_seconds` (int, optional)
+- Default timeout is 60 seconds when `timeout_seconds` is not set or <= 0.
+- If `-allowed_dir` is set, `working_dir` must be inside an allowed directory.
 
 ## Security Model
 
