@@ -67,7 +67,7 @@ Type your message and press Enter. Commands:
 | `-skills_dirs` | Comma-separated list of directories containing skills       | `./skills` |
 | `-max_turns`   | Max tool-call turns per user message                        | `10`       |
 | `-stream`      | Stream assistant output                                     | `false`    |
-| `-verbose`     | Verbose logging                                             | `false`    |
+| `-verbose`     | Verbose logging (startup config, skills, tools, chat loop)  | `false`    |
 | `-allowed_dir` | Base directory for file operations (empty = no restriction) | ``         |
 
 ### Environment variables

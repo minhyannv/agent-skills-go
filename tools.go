@@ -71,6 +71,9 @@ func NewTools(ctx ToolContext) *Tools {
 func (t *Tools) Register(tool Tool) {
 	t.tools[tool.Name()] = tool
 	t.params = append(t.params, tool.Definition())
+	if t.ctx.Verbose {
+		log.Printf("[verbose] registered tool: %s", tool.Name())
+	}
 }
 
 // Definitions returns all tool definitions for OpenAI API.

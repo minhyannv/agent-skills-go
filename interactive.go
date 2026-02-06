@@ -13,6 +13,9 @@ import (
 
 // runInteractiveMode runs an interactive chat session.
 func runInteractiveMode(app *App) {
+	if app.Config.Verbose {
+		log.Printf("[verbose] interactive mode start: model=%s stream=%v max_turns=%d", app.Config.OpenAIModel, app.Config.Stream, app.Config.MaxTurns)
+	}
 	// Initialize conversation history with system message
 	messages := []openai.ChatCompletionMessageParamUnion{
 		openai.SystemMessage(app.SystemPrompt),
@@ -31,6 +34,9 @@ func runInteractiveMode(app *App) {
 		input := strings.TrimSpace(scanner.Text())
 		if input == "" {
 			continue
+		}
+		if app.Config.Verbose {
+			log.Printf("[verbose] input received: bytes=%d is_command=%v messages=%d", len(input), strings.HasPrefix(input, "/"), len(messages))
 		}
 
 		// Handle commands
