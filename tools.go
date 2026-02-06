@@ -4,8 +4,10 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/openai/openai-go"
 )
@@ -38,6 +40,14 @@ type Tools struct {
 	tools  map[string]Tool
 	ctx    ToolContext
 	params []openai.ChatCompletionToolParam
+}
+
+// toolResponse is the wrapper sent back to the model after tool execution.
+type toolResponse struct {
+	OK   bool        `json:"ok"`
+	Tool string      `json:"tool,omitempty"`
+	Data interface{} `json:"data,omitempty"`
+	Err  string      `json:"error,omitempty"`
 }
 
 // NewTools creates a new Tools collection with all built-in tools.
@@ -114,10 +124,36 @@ func marshalToolResponse(tool string, data interface{}, err error) (string, erro
 	return string(payload), nil
 }
 
-// toolResponse is the wrapper sent back to the model after tool execution.
-type toolResponse struct {
-	OK   bool        `json:"ok"`
-	Tool string      `json:"tool,omitempty"`
-	Data interface{} `json:"data,omitempty"`
-	Err  string      `json:"error,omitempty"`
+// chooseTempDir selects a directory for temporary code files.
+func chooseTempDir(validatedWorkingDir string, allowedDirs []string) (string, error) {
+	if validatedWorkingDir != "" {
+		return validatedWorkingDir, nil
+	}
+	roots := normalizeAllowedDirs(allowedDirs)
+	if len(roots) > 0 {
+		return roots[0], nil
+	}
+	if len(allowedDirs) > 0 {
+		return "", errors.New("no valid allowed_dir available for temp file")
+	}
+	return "", nil
+}
+
+// writeTempFile creates a temp file with the provided content and returns its path.
+func writeTempFile(dir string, pattern string, content string) (string, error) {
+	file, err := os.CreateTemp(dir, pattern)
+	if err != nil {
+		return "", err
+	}
+	name := file.Name()
+	if _, err := file.WriteString(content); err != nil {
+		_ = file.Close()
+		_ = os.Remove(name)
+		return "", err
+	}
+	if err := file.Close(); err != nil {
+		_ = os.Remove(name)
+		return "", err
+	}
+	return name, nil
 }

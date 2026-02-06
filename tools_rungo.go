@@ -28,7 +28,7 @@ func (t *RunGoTool) Definition() openai.ChatCompletionToolParam {
 	return openai.ChatCompletionToolParam{
 		Function: openai.FunctionDefinitionParam{
 			Name:        "run_go",
-			Description: openai.String("Run a Go script from file or inline code"),
+			Description: openai.String("Run a Go script from file or code"),
 			Parameters: openai.FunctionParameters{
 				"type": "object",
 				"properties": map[string]any{

@@ -216,3 +216,36 @@ func TestToolRunShellSecurity(t *testing.T) {
 		t.Error("expected dangerous command to be blocked, but it succeeded")
 	}
 }
+
+// TestToolRunShellPathSecurity tests path restrictions in run_shell.
+func TestToolRunShellPathSecurity(t *testing.T) {
+	allowedDir := t.TempDir()
+	disallowedDir := t.TempDir()
+	scriptPath := filepath.Join(disallowedDir, "script.sh")
+	if err := os.WriteFile(scriptPath, []byte("echo hi"), 0o644); err != nil {
+		t.Fatalf("failed to create script: %v", err)
+	}
+
+	toolCtx := ToolContext{
+		MaxReadBytes: defaultMaxReadBytes,
+		Verbose:      false,
+		AllowedDirs:  []string{allowedDir},
+		Ctx:          nil,
+	}
+	shellTool := &RunShellTool{ctx: toolCtx}
+
+	args := `{"path":"` + scriptPath + `"}`
+	resp, err := shellTool.Execute(args)
+	if err != nil {
+		t.Fatalf("runShell returned error: %v", err)
+	}
+
+	var result toolResponseTest
+	if err := json.Unmarshal([]byte(resp), &result); err != nil {
+		t.Fatalf("unmarshal response: %v", err)
+	}
+
+	if result.OK {
+		t.Error("expected path restriction to fail, but it succeeded")
+	}
+}

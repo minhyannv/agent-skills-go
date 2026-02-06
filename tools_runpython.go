@@ -28,7 +28,7 @@ func (t *RunPythonTool) Definition() openai.ChatCompletionToolParam {
 	return openai.ChatCompletionToolParam{
 		Function: openai.FunctionDefinitionParam{
 			Name:        "run_python",
-			Description: openai.String("Run a Python script from file or inline code"),
+			Description: openai.String("Run a Python script from file or code"),
 			Parameters: openai.FunctionParameters{
 				"type": "object",
 				"properties": map[string]any{

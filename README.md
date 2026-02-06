@@ -129,17 +129,17 @@ Arguments:
 
 ### `run_shell`
 
-Run a shell command or inline script using `bash -lc`. Dangerous commands are blocked.
+Run a shell command using `bash -lc` or a script file using `bash`. Dangerous commands are blocked.
 
 Arguments:
 
-- `command` (string) or `code` (string). Provide exactly one.
+- `command` (string) or `path` (string). Provide exactly one.
 - `working_dir` (string, optional)
 - `timeout_seconds` (int, optional)
 
 ### `run_python`
 
-Run a Python script from a file path or inline code (requires `python3` or `python`).
+Run a Python script from a file path or code (requires `python3` or `python`).
 
 Arguments:
 
@@ -150,7 +150,7 @@ Arguments:
 
 ### `run_go`
 
-Run a Go script from a file path or inline code (requires `go`).
+Run a Go script from a file path or code (requires `go`).
 
 Arguments:
 
