@@ -1,4 +1,4 @@
-module agent-skills-go
+module github.com/minhyannv/agent-skills-go
 
 go 1.22
 
