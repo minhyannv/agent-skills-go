@@ -1,6 +1,7 @@
 # Agent Skills Go
 
-Agent Skills Go is a Go-based interactive agent that discovers local skills and uses OpenAI chat completions to call tools. It reads skill documentation from `SKILL.md`, runs approved scripts, and enforces path and command safety checks.
+Agent Skills Go is a Go-based interactive agent that discovers local skills and uses OpenAI chat completions to call
+tools. It reads skill documentation from `SKILL.md`, runs approved scripts, and enforces path and command safety checks.
 
 ## Features
 
@@ -40,8 +41,6 @@ OPENAI_BASE_URL=https://api.openai.com/v1  # optional
 
 ### Run
 
-This repo includes a `skills/` directory. Point the app at it:
-
 ```bash
 go run . -skills_dirs ./skills,../shared-skills
 ```
@@ -63,25 +62,26 @@ Type your message and press Enter. Commands:
 
 ### Command-line flags
 
-| Flag | Description | Default           |
-|------|-------------|-------------------|
-| `-skills_dirs` | Comma-separated list of directories containing skills | `./skills`        |
-| `-max_turns` | Max tool-call turns per user message | `10`              |
-| `-stream` | Stream assistant output | `false`           |
-| `-verbose` | Verbose tool-call logging | `false`           |
-| `-allowed_dir` | Base directory for file operations (empty = no restriction) | ``                |
+| Flag           | Description                                                 | Default    |
+|----------------|-------------------------------------------------------------|------------|
+| `-skills_dirs` | Comma-separated list of directories containing skills       | `./skills` |
+| `-max_turns`   | Max tool-call turns per user message                        | `10`       |
+| `-stream`      | Stream assistant output                                     | `false`    |
+| `-verbose`     | Verbose logging                                             | `false`    |
+| `-allowed_dir` | Base directory for file operations (empty = no restriction) | ``         |
 
 ### Environment variables
 
-| Variable | Description |
-|----------|-------------|
-| `OPENAI_API_KEY` | OpenAI API key (required) |
-| `OPENAI_MODEL` | Model name (required) |
+| Variable          | Description                             |
+|-------------------|-----------------------------------------|
+| `OPENAI_API_KEY`  | OpenAI API key (required)               |
+| `OPENAI_MODEL`    | Model name (required)                   |
 | `OPENAI_BASE_URL` | Override OpenAI API base URL (optional) |
 
 ## Skills
 
-Skills are discovered by walking the skills directories and parsing `SKILL.md` files. Each file must include YAML front matter with at least a `name` field. Missing or invalid front matter will fail startup.
+Skills are discovered by walking the skills directories and parsing `SKILL.md` files. Each file must include YAML front
+matter with at least a `name` field. Missing or invalid front matter will fail startup.
 
 Example structure:
 
@@ -103,7 +103,8 @@ description: PDF processing and manipulation
 ---
 ```
 
-At startup, the system prompt includes a list of available skills and the full `SKILL.md` file path for each skill. The assistant is instructed to open `SKILL.md` with `read_file` before using a skill.
+At startup, the system prompt includes a list of available skills and the full `SKILL.md` file path for each skill. The
+assistant is instructed to open `SKILL.md` with `read_file` before using a skill.
 
 ## Built-in Tools
 
@@ -112,6 +113,7 @@ At startup, the system prompt includes a list of available skills and the full `
 Read file contents with optional `max_bytes` (default limit is 1MB).
 
 Arguments:
+
 - `path` (string, required)
 - `max_bytes` (int, optional)
 
@@ -120,6 +122,7 @@ Arguments:
 Write content to a file on disk.
 
 Arguments:
+
 - `path` (string, required)
 - `content` (string, required)
 - `overwrite` (bool, optional) — when false, writing to an existing file returns an error
@@ -129,6 +132,7 @@ Arguments:
 Run a shell command or inline script using `bash -lc`. Dangerous commands are blocked.
 
 Arguments:
+
 - `command` (string) or `code` (string). Provide exactly one.
 - `working_dir` (string, optional)
 - `timeout_seconds` (int, optional)
@@ -138,6 +142,7 @@ Arguments:
 Run a Python script from a file path or inline code (requires `python3` or `python`).
 
 Arguments:
+
 - `path` (string) or `code` (string). Provide exactly one.
 - `args` (string array, optional)
 - `working_dir` (string, optional)
@@ -148,6 +153,7 @@ Arguments:
 Run a Go script from a file path or inline code (requires `go`).
 
 Arguments:
+
 - `path` (string) or `code` (string). Provide exactly one.
 - `args` (string array, optional)
 - `working_dir` (string, optional)
@@ -156,7 +162,8 @@ Arguments:
 ## Security Model
 
 - **Path validation** blocks traversal attempts (e.g., `../`).
-- **Allowed directories**: if `-allowed_dir` is set, all file and working directory operations must stay within that directory. The skills directories are also allowed so `SKILL.md` and skill scripts can be read or executed.
+- **Allowed directories**: if `-allowed_dir` is set, all file and working directory operations must stay within that
+  directory. The skills directories are also allowed so `SKILL.md` and skill scripts can be read or executed.
 - **Dangerous command filtering** blocks destructive commands like `rm`, `dd`, and `mkfs`.
 
 ## Architecture
