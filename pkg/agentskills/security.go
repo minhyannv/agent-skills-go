@@ -1,5 +1,5 @@
 // Security utilities for path validation and command safety checks.
-package main
+package agentskills
 
 import (
 	"fmt"

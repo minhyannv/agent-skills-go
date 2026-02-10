@@ -1,5 +1,5 @@
 // Tests for prompt generation helpers.
-package main
+package agentskills
 
 import (
 	"strings"
@@ -8,12 +8,12 @@ import (
 
 // TestToPromptMarkdown validates markdown formatting of skills.
 func TestToPromptMarkdown(t *testing.T) {
-	skills := []*Skill{
+	skills := []*skill{
 		{Name: "pdf", Description: "PDF tools", SkillFilePath: "/tmp/pdf"},
 		{Name: "docx", Description: "DOCX tools", SkillFilePath: "/tmp/docx/SKILL.md"},
 	}
 
-	md := ToPromptMarkdown(skills)
+	md := toPromptMarkdown(skills)
 	if md == "" {
 		t.Fatal("expected markdown output")
 	}
@@ -34,10 +34,10 @@ func TestToPromptMarkdown(t *testing.T) {
 
 // TestBuildSystemPrompt verifies system prompt composition.
 func TestBuildSystemPrompt(t *testing.T) {
-	skills := []*Skill{
+	skills := []*skill{
 		{Name: "xlsx", Description: "Excel tools", SkillFilePath: "/tmp/xlsx/SKILL.md"},
 	}
-	prompt := BuildSystemPrompt(skills)
+	prompt := buildSystemPrompt(skills)
 	if prompt == "" {
 		t.Fatal("expected prompt output")
 	}

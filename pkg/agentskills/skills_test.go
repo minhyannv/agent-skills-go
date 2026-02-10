@@ -1,5 +1,5 @@
 // Tests for skill parsing and discovery.
-package main
+package agentskills
 
 import (
 	"os"
@@ -21,9 +21,9 @@ description: PDF processing skill
 		t.Fatalf("write SKILL.md: %v", err)
 	}
 
-	skill, err := ParseSkillFile(skillPath)
+	skill, err := parseSkillFile(skillPath)
 	if err != nil {
-		t.Fatalf("ParseSkillFile: %v", err)
+		t.Fatalf("parseSkillFile: %v", err)
 	}
 	if skill.Name != "pdf" {
 		t.Fatalf("expected name pdf, got %q", skill.Name)
@@ -65,9 +65,9 @@ description: Second
 		t.Fatalf("write alpha SKILL.md: %v", err)
 	}
 
-	skills, err := LoadSkillsFromDir(dir)
+	skills, err := loadSkillsFromDir(dir)
 	if err != nil {
-		t.Fatalf("LoadSkillsFromDir: %v", err)
+		t.Fatalf("loadSkillsFromDir: %v", err)
 	}
 	if len(skills) != 2 {
 		t.Fatalf("expected 2 skills, got %d", len(skills))

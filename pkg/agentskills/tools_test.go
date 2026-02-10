@@ -1,5 +1,5 @@
 // Tests for tool execution helpers.
-package main
+package agentskills
 
 import (
 	"context"
@@ -22,17 +22,17 @@ type toolResponseTest struct {
 func TestToolReadWriteFile(t *testing.T) {
 	dir := t.TempDir()
 	filePath := filepath.Join(dir, "note.txt")
-	toolCtx := ToolContext{
+	toolCtx := toolContext{
 		MaxReadBytes: defaultMaxReadBytes,
 		Verbose:      false,
 		AllowedDirs:  []string{dir}, // Set allowed dir to test directory
 		Ctx:          context.Background(),
 	}
-	writeTool := &WriteFileTool{ctx: toolCtx}
-	readTool := &ReadFileTool{ctx: toolCtx}
+	writeTool := &writeFileTool{ctx: toolCtx}
+	readTool := &readFileTool{ctx: toolCtx}
 
 	writeArgs := `{"path":"` + filePath + `","content":"hello","overwrite":false}`
-	writeResp, err := writeTool.Execute(writeArgs)
+	writeResp, err := writeTool.execute(writeArgs)
 	if err != nil {
 		t.Fatalf("writeFile: %v", err)
 	}
@@ -54,7 +54,7 @@ func TestToolReadWriteFile(t *testing.T) {
 	}
 
 	readArgs := `{"path":"` + filePath + `","max_bytes":3}`
-	readResp, err := readTool.Execute(readArgs)
+	readResp, err := readTool.execute(readArgs)
 	if err != nil {
 		t.Fatalf("readFile: %v", err)
 	}
@@ -83,21 +83,21 @@ func TestToolReadWriteFile(t *testing.T) {
 func TestToolWriteFileNoOverwrite(t *testing.T) {
 	dir := t.TempDir()
 	filePath := filepath.Join(dir, "note.txt")
-	toolCtx := ToolContext{
+	toolCtx := toolContext{
 		MaxReadBytes: defaultMaxReadBytes,
 		Verbose:      false,
 		AllowedDirs:  []string{dir}, // Set allowed dir to test directory
 		Ctx:          context.Background(),
 	}
-	writeTool := &WriteFileTool{ctx: toolCtx}
+	writeTool := &writeFileTool{ctx: toolCtx}
 
 	writeArgs := `{"path":"` + filePath + `","content":"first","overwrite":false}`
-	_, err := writeTool.Execute(writeArgs)
+	_, err := writeTool.execute(writeArgs)
 	if err != nil {
 		t.Fatalf("writeFile: %v", err)
 	}
 
-	writeAgain, err := writeTool.Execute(writeArgs)
+	writeAgain, err := writeTool.execute(writeArgs)
 	if err != nil {
 		t.Fatalf("writeFile: %v", err)
 	}
@@ -112,15 +112,15 @@ func TestToolWriteFileNoOverwrite(t *testing.T) {
 
 // TestToolRunShell verifies command execution and output capture.
 func TestToolRunShell(t *testing.T) {
-	toolCtx := ToolContext{
+	toolCtx := toolContext{
 		MaxReadBytes: defaultMaxReadBytes,
 		Verbose:      false,
 		AllowedDirs:  nil, // No restriction for this test
 		Ctx:          context.Background(),
 	}
-	shellTool := &RunShellTool{ctx: toolCtx}
+	shellTool := &runShellTool{ctx: toolCtx}
 	args := `{"command":"echo hello"}`
-	resp, err := shellTool.Execute(args)
+	resp, err := shellTool.execute(args)
 	if err != nil {
 		t.Fatalf("runShell: %v", err)
 	}
@@ -145,16 +145,16 @@ func TestToolRunShell(t *testing.T) {
 
 // TestToolRunShellQuotes verifies quoted arguments are parsed correctly.
 func TestToolRunShellQuotes(t *testing.T) {
-	toolCtx := ToolContext{
+	toolCtx := toolContext{
 		MaxReadBytes: defaultMaxReadBytes,
 		Verbose:      false,
 		AllowedDirs:  nil,
 		Ctx:          context.Background(),
 	}
-	shellTool := &RunShellTool{ctx: toolCtx}
+	shellTool := &runShellTool{ctx: toolCtx}
 	args := `{"command":"echo \"hello world\""}`
 
-	resp, err := shellTool.Execute(args)
+	resp, err := shellTool.execute(args)
 	if err != nil {
 		t.Fatalf("runShell: %v", err)
 	}
@@ -177,16 +177,16 @@ func TestToolRunShellQuotes(t *testing.T) {
 // TestToolRunShellSanitizedEnv ensures sensitive env vars are not inherited by subprocesses.
 func TestToolRunShellSanitizedEnv(t *testing.T) {
 	t.Setenv("OPENAI_API_KEY", "secret-for-test")
-	toolCtx := ToolContext{
+	toolCtx := toolContext{
 		MaxReadBytes: defaultMaxReadBytes,
 		Verbose:      false,
 		AllowedDirs:  nil,
 		Ctx:          context.Background(),
 	}
-	shellTool := &RunShellTool{ctx: toolCtx}
+	shellTool := &runShellTool{ctx: toolCtx}
 	args := `{"command":"env"}`
 
-	resp, err := shellTool.Execute(args)
+	resp, err := shellTool.execute(args)
 	if err != nil {
 		t.Fatalf("runShell: %v", err)
 	}

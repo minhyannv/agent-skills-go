@@ -1,5 +1,4 @@
-// Skill discovery and parsing helpers.
-package main
+package agentskills
 
 import (
 	"fmt"
@@ -12,8 +11,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Skill describes a discovered skill and its metadata.
-type Skill struct {
+type skill struct {
 	Name          string
 	Description   string
 	SkillFilePath string
@@ -25,9 +23,8 @@ type skillFrontMatter struct {
 	Description string `yaml:"description"`
 }
 
-// LoadSkillsFromDir walks a directory tree and returns all SKILL.md entries.
-func LoadSkillsFromDir(dir string) ([]*Skill, error) {
-	var skills []*Skill
+func loadSkillsFromDir(dir string) ([]*skill, error) {
+	var skills []*skill
 	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -36,7 +33,7 @@ func LoadSkillsFromDir(dir string) ([]*Skill, error) {
 			return nil
 		}
 		if strings.EqualFold(d.Name(), "SKILL.md") {
-			skill, err := ParseSkillFile(path)
+			skill, err := parseSkillFile(path)
 			if err != nil {
 				return fmt.Errorf("parse %s: %w", path, err)
 			}
@@ -55,14 +52,13 @@ func LoadSkillsFromDir(dir string) ([]*Skill, error) {
 	return skills, nil
 }
 
-// LoadSkillsFromDirs aggregates skills from multiple directories.
-func LoadSkillsFromDirs(dirs []string) ([]*Skill, error) {
-	var skills []*Skill
+func loadSkillsFromDirs(dirs []string) ([]*skill, error) {
+	var skills []*skill
 	for _, dir := range dirs {
 		if strings.TrimSpace(dir) == "" {
 			continue
 		}
-		found, err := LoadSkillsFromDir(dir)
+		found, err := loadSkillsFromDir(dir)
 		if err != nil {
 			return nil, err
 		}
@@ -81,8 +77,7 @@ func LoadSkillsFromDirs(dirs []string) ([]*Skill, error) {
 	return skills, nil
 }
 
-// ParseSkillFile reads a SKILL.md file and extracts its metadata.
-func ParseSkillFile(path string) (*Skill, error) {
+func parseSkillFile(path string) (*skill, error) {
 	content, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -96,7 +91,7 @@ func ParseSkillFile(path string) (*Skill, error) {
 		return nil, fmt.Errorf("missing front matter name")
 	}
 
-	return &Skill{
+	return &skill{
 		Name:          strings.TrimSpace(fm.Name),
 		Description:   strings.TrimSpace(fm.Description),
 		SkillFilePath: path,

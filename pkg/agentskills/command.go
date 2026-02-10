@@ -1,11 +1,10 @@
 // Command execution helpers for tool runners.
-package main
+package agentskills
 
 import (
 	"bytes"
 	"context"
 	"errors"
-	"log"
 	"os"
 	"os/exec"
 	"strings"
@@ -25,17 +24,15 @@ type commandResult struct {
 }
 
 // runCommand executes a command with timeout and captures stdout/stderr.
-func runCommand(command string, args []string, workingDir string, timeout time.Duration, verbose bool) commandResult {
+func (ctx toolContext) runCommand(command string, args []string, workingDir string, timeout time.Duration) commandResult {
 	if timeout <= 0 {
 		timeout = 60 * time.Second
 	}
-	if verbose {
-		log.Printf("[verbose] runCommand: command=%s, args=%v, working_dir=%s, timeout=%v", command, args, workingDir, timeout)
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	ctx.debugf("[verbose] runCommand: command=%s, args=%v, working_dir=%s, timeout=%v", command, args, workingDir, timeout)
+	execCtx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, command, args...)
+	cmd := exec.CommandContext(execCtx, command, args...)
 	cmd.Env = sanitizedEnv()
 	if workingDir != "" {
 		cmd.Dir = workingDir
@@ -57,30 +54,24 @@ func runCommand(command string, args []string, workingDir string, timeout time.D
 		var exitErr *exec.ExitError
 		if errors.As(err, &exitErr) {
 			exitCode = exitErr.ExitCode()
-		} else if errors.Is(err, context.DeadlineExceeded) {
+		} else if errors.Is(err, context.DeadlineExceeded) || errors.Is(execCtx.Err(), context.DeadlineExceeded) {
 			exitCode = -1
-			if verbose {
-				log.Printf("[verbose] runCommand: timeout exceeded after %v", timeout)
-			}
+			ctx.debugf("[verbose] runCommand: timeout exceeded after %v", timeout)
 		} else {
 			exitCode = -1
 		}
-		if verbose {
-			log.Printf("[verbose] runCommand: error occurred: %v (exit_code=%d)", err, exitCode)
-		}
+		ctx.debugf("[verbose] runCommand: error occurred: %v (exit_code=%d)", err, exitCode)
 	}
 
-	if verbose {
-		stdoutLen := stdout.Len()
-		stderrLen := stderr.Len()
-		log.Printf("[verbose] runCommand: completed, exit_code=%d, duration=%dms, stdout=%d bytes, stderr=%d bytes", exitCode, duration, stdoutLen, stderrLen)
-		if stderrLen > 0 {
-			stderrPreview := stderr.String()
-			if len(stderrPreview) > 500 {
-				log.Printf("[verbose] runCommand: stderr preview: %s...", stderrPreview[:500])
-			} else {
-				log.Printf("[verbose] runCommand: stderr: %s", stderrPreview)
-			}
+	stdoutLen := stdout.Len()
+	stderrLen := stderr.Len()
+	ctx.debugf("[verbose] runCommand: completed, exit_code=%d, duration=%dms, stdout=%d bytes, stderr=%d bytes", exitCode, duration, stdoutLen, stderrLen)
+	if stderrLen > 0 {
+		stderrPreview := stderr.String()
+		if len(stderrPreview) > 500 {
+			ctx.debugf("[verbose] runCommand: stderr preview: %s...", stderrPreview[:500])
+		} else {
+			ctx.debugf("[verbose] runCommand: stderr: %s", stderrPreview)
 		}
 	}
 

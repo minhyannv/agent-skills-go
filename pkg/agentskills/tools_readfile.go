@@ -1,29 +1,24 @@
-// ReadFileTool implementation.
-package main
+package agentskills
 
 import (
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"os"
 
 	"github.com/openai/openai-go"
 )
 
-// ReadFileTool implements the read_file tool.
-type ReadFileTool struct {
-	ctx ToolContext
+type readFileTool struct {
+	ctx toolContext
 }
 
-// Name returns the tool name used by the model.
-func (t *ReadFileTool) Name() string {
+func (t *readFileTool) name() string {
 	return "read_file"
 }
 
-// Definition returns the OpenAI tool schema for read_file.
-func (t *ReadFileTool) Definition() openai.ChatCompletionToolParam {
+func (t *readFileTool) definition() openai.ChatCompletionToolParam {
 	return openai.ChatCompletionToolParam{
 		Function: openai.FunctionDefinitionParam{
 			Name:        "read_file",
@@ -46,21 +41,16 @@ func (t *ReadFileTool) Definition() openai.ChatCompletionToolParam {
 	}
 }
 
-// Execute runs a read_file request.
-func (t *ReadFileTool) Execute(argText string) (string, error) {
+func (t *readFileTool) execute(argText string) (string, error) {
 	var args struct {
 		Path     string `json:"path"`
 		MaxBytes int64  `json:"max_bytes"`
 	}
 	if err := json.Unmarshal([]byte(argText), &args); err != nil {
-		if t.ctx.Verbose {
-			log.Printf("[verbose] read_file: failed to parse arguments: %v", err)
-		}
+		t.ctx.debugf("[verbose] read_file: failed to parse arguments: %v", err)
 		return marshalToolResponse("read_file", nil, err)
 	}
-	if t.ctx.Verbose {
-		log.Printf("[verbose] read_file: path=%s, max_bytes=%d", args.Path, args.MaxBytes)
-	}
+	t.ctx.debugf("[verbose] read_file: path=%s, max_bytes=%d", args.Path, args.MaxBytes)
 	if args.Path == "" {
 		return marshalToolResponse("read_file", nil, errors.New("path is required"))
 	}
@@ -68,31 +58,23 @@ func (t *ReadFileTool) Execute(argText string) (string, error) {
 	// Validate and sanitize path
 	validatedPath, err := validatePathWithAllowedDirs(args.Path, t.ctx.AllowedDirs)
 	if err != nil {
-		if t.ctx.Verbose {
-			log.Printf("[verbose] read_file: path validation failed: %v", err)
-		}
+		t.ctx.debugf("[verbose] read_file: path validation failed: %v", err)
 		return marshalToolResponse("read_file", nil, fmt.Errorf("path validation failed: %w", err))
 	}
 
 	// Check if file exists and is not a directory
 	if err := validateFileExists(validatedPath); err != nil {
-		if t.ctx.Verbose {
-			log.Printf("[verbose] read_file: file validation failed: %v", err)
-		}
+		t.ctx.debugf("[verbose] read_file: file validation failed: %v", err)
 		return marshalToolResponse("read_file", nil, err)
 	}
 
 	info, err := os.Stat(validatedPath)
 	if err != nil {
-		if t.ctx.Verbose {
-			log.Printf("[verbose] read_file: stat failed: %v", err)
-		}
+		t.ctx.debugf("[verbose] read_file: stat failed: %v", err)
 		return marshalToolResponse("read_file", nil, err)
 	}
 
-	if t.ctx.Verbose {
-		log.Printf("[verbose] read_file: file size=%d bytes", info.Size())
-	}
+	t.ctx.debugf("[verbose] read_file: file size=%d bytes", info.Size())
 
 	maxBytes := args.MaxBytes
 	if maxBytes <= 0 {
@@ -104,9 +86,7 @@ func (t *ReadFileTool) Execute(argText string) (string, error) {
 
 	file, err := os.Open(validatedPath)
 	if err != nil {
-		if t.ctx.Verbose {
-			log.Printf("[verbose] read_file: open failed: %v", err)
-		}
+		t.ctx.debugf("[verbose] read_file: open failed: %v", err)
 		return marshalToolResponse("read_file", nil, err)
 	}
 	defer func() { _ = file.Close() }()
@@ -114,9 +94,7 @@ func (t *ReadFileTool) Execute(argText string) (string, error) {
 	limitedReader := io.LimitReader(file, maxBytes+1)
 	data, err := io.ReadAll(limitedReader)
 	if err != nil {
-		if t.ctx.Verbose {
-			log.Printf("[verbose] read_file: read failed: %v", err)
-		}
+		t.ctx.debugf("[verbose] read_file: read failed: %v", err)
 		return marshalToolResponse("read_file", nil, err)
 	}
 
@@ -125,9 +103,7 @@ func (t *ReadFileTool) Execute(argText string) (string, error) {
 		truncated = true
 		originalLen := len(data)
 		data = data[:maxBytes]
-		if t.ctx.Verbose {
-			log.Printf("[verbose] read_file: truncated from %d to %d bytes", originalLen, maxBytes)
-		}
+		t.ctx.debugf("[verbose] read_file: truncated from %d to %d bytes", originalLen, maxBytes)
 	}
 
 	result := struct {
@@ -141,8 +117,6 @@ func (t *ReadFileTool) Execute(argText string) (string, error) {
 		Truncated: truncated,
 		Content:   string(data),
 	}
-	if t.ctx.Verbose {
-		log.Printf("[verbose] read_file: success, read %d bytes (truncated=%v)", result.Bytes, truncated)
-	}
+	t.ctx.debugf("[verbose] read_file: success, read %d bytes (truncated=%v)", result.Bytes, truncated)
 	return marshalToolResponse("read_file", result, nil)
 }

@@ -1,24 +1,38 @@
 # Agent Skills Go
 
-Agent Skills Go is a Go-based interactive agent that discovers local skills and uses OpenAI chat completions to call
-tools. It reads skill documentation from `SKILL.md`, runs approved scripts, and enforces path and command safety checks.
+Agent Skills Go is a skill-aware AI agent framework in Go.
 
-## Features
+It provides:
+- A reusable core library: `pkg/agentskills`
+- A local CLI adapter: `cmd/agent-skills-go`
 
-- Interactive terminal chat loop with tool calling
-- Skill discovery via `SKILL.md` front matter
+The core library focuses on programmatic integration. The CLI is just one way to run it.
+
+## Highlights
+
+- Library-first architecture (`New` + `Chat`)
+- Skill discovery from local `SKILL.md` files
 - Built-in tools: `read_file`, `write_file`, `run_shell`
-- Security controls: path validation, allowed directories, and command hardening
-- Configurable via env vars and CLI flags
-- Optional streaming and verbose logging
+- Streaming and non-streaming chat support
+- Security controls for filesystem and shell execution
+- CLI kept separate from core logic
 
-## Quick Start
+## Project Layout
+
+```text
+cmd/agent-skills-go/          # CLI entry and adapters
+cmd/agent-skills-go/repl.go   # REPL adapter
+
+pkg/agentskills/              # Core reusable library
+```
+
+## Quick Start (CLI)
 
 ### Prerequisites
 
 - Go 1.22+
 - OpenAI API key
-- A model name in `OPENAI_MODEL`
+- OpenAI model name
 
 ### Install
 
@@ -30,7 +44,7 @@ go mod download
 
 ### Configure
 
-Create a `.env` file or set environment variables:
+Set environment variables (or put them in `.env` for CLI use):
 
 ```bash
 OPENAI_API_KEY=your_api_key_here
@@ -41,59 +55,72 @@ OPENAI_BASE_URL=https://api.openai.com/v1  # optional
 ### Run
 
 ```bash
-go run . -skills_dirs ./skills,../shared-skills
+go run ./cmd/agent-skills-go
+# Optional: enable skills
+# go run ./cmd/agent-skills-go -skills_dirs ./skills -skills_dirs ../shared-skills
 ```
 
-The CLI starts an interactive REPL session:
+## Use as a Library
 
-```
-=== Agent Skills Go - Interactive Mode ===
-Type your message and press Enter. Commands:
-  /help  - Show this help message
-  /clear - Clear conversation history
-  /quit  - Exit the program
-  /exit  - Exit the program
+Install:  
 
-> 
+```bash
+go get github.com/minhyannv/agent-skills-go
 ```
 
-## Configuration
+### End-to-End Example
 
-### Command-line flags
+```go 
+package main
 
-| Flag           | Description                                                 | Default    |
-|----------------|-------------------------------------------------------------|------------|
-| `-skills_dirs` | Comma-separated list of directories containing skills       | `./skills` |
-| `-max_turns`   | Max tool-call turns per user message                        | `10`       |
-| `-stream`      | Stream assistant output                                     | `false`    |
-| `-verbose`     | Verbose logging (startup config, skills, tools, chat loop)  | `false`    |
-| `-allowed_dir` | Base directory for file operations (set empty to disable restriction) | `current working directory` |
+import (
+	"context"
+	"fmt"
+	"os"
 
-### Environment variables
+	"github.com/minhyannv/agent-skills-go/pkg/agentskills"
+)
 
-| Variable          | Description                             |
-|-------------------|-----------------------------------------|
-| `OPENAI_API_KEY`  | OpenAI API key (required)               |
-| `OPENAI_MODEL`    | Model name (required)                   |
-| `OPENAI_BASE_URL` | Override OpenAI API base URL (optional) |
+func main() {
+	cfg := agentskills.DefaultConfig()
+	cfg.SkillsDirs = []string{"./skills"} // optional
+	cfg.APIKey = "your_api_key_here"
+	cfg.Model = "gpt-4o-mini"
+	cfg.BaseURL = "https://api.openai.com/v1"
+	cfg.Verbose = true
+	cfg.Logger = agentskills.NewWriterLogger(os.Stderr)
+
+	app, err := agentskills.New(context.Background(), cfg)
+	if err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "init failed: %v\n", err)
+		os.Exit(1)
+	}
+
+	messages := []agentskills.Message{
+		{Role: agentskills.RoleUser, Content: "Summarize this repository."},
+	}
+
+	result, err := app.Chat(messages, agentskills.ChatOptions{
+		Stream: false,
+	})
+	if err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "chat failed: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Println(result.Content)
+	messages = result.Messages // carry forward conversation history
+	_ = messages
+}
+```
 
 ## Skills
 
-Skills are discovered by walking the skills directories and parsing `SKILL.md` files. Each file must include YAML front
-matter with at least a `name` field. Missing or invalid front matter will fail startup.
+Skills are discovered from directories in `Config.SkillsDirs`.
+Each skill must provide a `SKILL.md` with YAML front matter.
+If `SkillsDirs` is empty, the app still works and chats normally without loading any skills.
 
-Example structure:
-
-```
-skills/
-  pdf/
-    SKILL.md
-    scripts/
-  docx/
-    SKILL.md
-```
-
-Example `SKILL.md` header:
+Example:
 
 ```yaml
 ---
@@ -102,55 +129,63 @@ description: PDF processing and manipulation
 ---
 ```
 
-At startup, the system prompt includes a list of available skills and the full `SKILL.md` file path for each skill. The
-assistant is instructed to open `SKILL.md` with `read_file` before using a skill.
-
 ## Built-in Tools
 
 ### `read_file`
 
-Read file contents with optional `max_bytes` (default limit is 1MB).
+Reads file content with optional byte limit.
 
 Arguments:
-
-- `path` (string, required)
-- `max_bytes` (int, optional)
+- `path` (required)
+- `max_bytes` (optional)
 
 ### `write_file`
 
-Write content to a file on disk.
+Writes full content to a file.
 
 Arguments:
-
-- `path` (string, required)
-- `content` (string, required)
-- `overwrite` (bool, optional) — when false, writing to an existing file returns an error
+- `path` (required)
+- `content` (required)
+- `overwrite` (optional, default false behavior in caller)
 
 ### `run_shell`
 
-Run a command directly (no `bash -lc`, no shell expansion). Dangerous executables are blocked.
+Runs a command directly (no shell expansion).
 
 Arguments:
-
-- `command` (string)
-- `working_dir` (string, optional)
-- `timeout_seconds` (int, optional)
-
-Notes:
-
-- Default timeout is 60 seconds when `timeout_seconds` is not set or <= 0.
-- By default, `working_dir` must be inside the current working directory.
-- Set `-allowed_dir=""` to disable directory restriction.
-- Shell control syntax like `;`, `|`, `&&`, redirection, and command substitution is blocked.
-- Shell interpreters (`sh`, `bash`, `zsh`, etc.) are blocked to prevent nested shell execution.
+- `command` (required)
+- `working_dir` (optional)
+- `timeout_seconds` (optional)
 
 ## Security Model
 
-- **Path validation** blocks traversal attempts (e.g., `../`).
-- **Allowed directories**: by default, file and working directory operations are restricted to the current working
-  directory. If `-allowed_dir` is set, that directory is used. Skills directories are also allowed so `SKILL.md` and
-  skill scripts can be read or executed. Set `-allowed_dir=""` to disable directory restriction.
-- **Command hardening** blocks destructive executables, shell control syntax, and nested shell interpreters.
+- Path traversal protection
+- Allowed directory restriction (default: current working directory)
+- Shell hardening:
+  - blocks dangerous executables
+  - blocks shell control syntax/operators
+  - blocks nested shell interpreters
+- Subprocess environment is sanitized
+
+## CLI Configuration
+
+### Flags
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `-skills_dirs` | Skill directory; repeat flag for multiple paths (comma-separated values are not supported) | empty (no skills loaded) |
+| `-max_turns` | Max tool-call turns per message | `10` |
+| `-stream` | Stream assistant output | `false` |
+| `-verbose` | Verbose logging | `false` |
+| `-allowed_dir` | Base directory for file operations (`""` disables restriction) | current working directory |
+
+### Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `OPENAI_API_KEY` | Required API key |
+| `OPENAI_MODEL` | Required model name |
+| `OPENAI_BASE_URL` | Optional base URL |
 
 ## Development
 
@@ -160,10 +195,16 @@ Run tests:
 go test ./...
 ```
 
-Build:
+Run vet:
 
 ```bash
-go build -o agent-skills-go .
+go vet ./...
+```
+
+Build CLI:
+
+```bash
+go build -o agent-skills-go ./cmd/agent-skills-go
 ```
 
 ## Contributing
@@ -177,7 +218,3 @@ See `SECURITY.md`.
 ## License
 
 MIT. See `LICENSE`.
-
-## Acknowledgments
-
-- Built with the OpenAI Go SDK

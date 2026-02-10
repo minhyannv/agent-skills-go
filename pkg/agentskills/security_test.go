@@ -1,5 +1,5 @@
 // Tests for security utilities.
-package main
+package agentskills
 
 import (
 	"encoding/json"
@@ -171,17 +171,17 @@ func TestToolReadFileSecurity(t *testing.T) {
 		t.Fatalf("failed to create test file: %v", err)
 	}
 
-	toolCtx := ToolContext{
+	toolCtx := toolContext{
 		MaxReadBytes: defaultMaxReadBytes,
 		Verbose:      false,
 		AllowedDirs:  []string{allowedDir},
 		Ctx:          nil,
 	}
-	readTool := &ReadFileTool{ctx: toolCtx}
+	readTool := &readFileTool{ctx: toolCtx}
 
 	// Test path traversal attempt
 	args := `{"path":"../test.txt"}`
-	resp, err := readTool.Execute(args)
+	resp, err := readTool.execute(args)
 	if err != nil {
 		t.Fatalf("readFile returned error: %v", err)
 	}
@@ -198,13 +198,13 @@ func TestToolReadFileSecurity(t *testing.T) {
 
 // TestToolRunShellSecurity tests security restrictions in run_shell.
 func TestToolRunShellSecurity(t *testing.T) {
-	toolCtx := ToolContext{
+	toolCtx := toolContext{
 		MaxReadBytes: defaultMaxReadBytes,
 		Verbose:      false,
 		AllowedDirs:  nil,
 		Ctx:          nil,
 	}
-	shellTool := &RunShellTool{ctx: toolCtx}
+	shellTool := &runShellTool{ctx: toolCtx}
 
 	tests := []struct {
 		name    string
@@ -218,7 +218,7 @@ func TestToolRunShellSecurity(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			args := `{"command":"` + tt.command + `"}`
-			resp, err := shellTool.Execute(args)
+			resp, err := shellTool.execute(args)
 			if err != nil {
 				t.Fatalf("runShell returned error: %v", err)
 			}

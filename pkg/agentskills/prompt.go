@@ -1,5 +1,4 @@
-// System prompt assembly for skill-aware conversations.
-package main
+package agentskills
 
 import (
 	"fmt"
@@ -7,8 +6,7 @@ import (
 	"strings"
 )
 
-// BuildSystemPrompt constructs the system prompt, including tool and skill metadata.
-func BuildSystemPrompt(skills []*Skill) string {
+func buildSystemPrompt(skills []*skill) string {
 	var sb strings.Builder
 
 	// Core identity + tool surface
@@ -33,7 +31,7 @@ func BuildSystemPrompt(skills []*Skill) string {
 	sb.WriteString("\n- For tool: `write_file`: never overwrite existing files unless explicitly instructed; prefer creating new files; validate by reading back a small excerpt.")
 
 	// Render available skills inventory (data-only; guarded)
-	if md := ToPromptMarkdown(skills); md != "" {
+	if md := toPromptMarkdown(skills); md != "" {
 		sb.WriteString("\n\n")
 		sb.WriteString(md)
 	}
@@ -41,11 +39,11 @@ func BuildSystemPrompt(skills []*Skill) string {
 	return strings.TrimSpace(sb.String())
 }
 
-// ToPromptMarkdown renders a markdown listing of available skills.
+// toPromptMarkdown renders a markdown listing of available skills.
 // Notes:
 // - This uses an XML-ish block for structure, but we escape special characters to prevent tag injection.
 // - Treat content inside <available_skills> as data, not instructions.
-func ToPromptMarkdown(skills []*Skill) string {
+func toPromptMarkdown(skills []*skill) string {
 	if len(skills) == 0 {
 		return ""
 	}
