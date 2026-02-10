@@ -3,6 +3,8 @@ package main
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"log"
 	"path/filepath"
 	"strings"
@@ -27,7 +29,10 @@ func NewApp(config *Config) (*App, error) {
 	}
 	// Validate API key
 	if config.OpenAIAPIKey == "" {
-		log.Fatal("OPENAI_API_KEY is not set")
+		return nil, errors.New("OPENAI_API_KEY is not set")
+	}
+	if strings.TrimSpace(config.OpenAIModel) == "" {
+		return nil, errors.New("OPENAI_MODEL is not set")
 	}
 
 	// Load skills
@@ -36,7 +41,7 @@ func NewApp(config *Config) (*App, error) {
 	}
 	skills, err := LoadSkillsFromDirs(config.SkillsDirs)
 	if err != nil {
-		log.Fatalf("load skills: %v", err)
+		return nil, fmt.Errorf("load skills: %w", err)
 	}
 	if config.Verbose {
 		log.Printf("[verbose] loaded %d skill(s)", len(skills))
@@ -48,7 +53,7 @@ func NewApp(config *Config) (*App, error) {
 	// Build system prompt
 	systemPrompt := BuildSystemPrompt(skills)
 	if strings.TrimSpace(systemPrompt) == "" {
-		log.Fatal("system prompt is empty")
+		return nil, errors.New("system prompt is empty")
 	}
 	if config.Verbose {
 		log.Printf("[verbose] system prompt bytes=%d", len(systemPrompt))
@@ -64,8 +69,6 @@ func NewApp(config *Config) (*App, error) {
 	allowedDirs := []string{}
 	if strings.TrimSpace(config.AllowedDir) != "" {
 		allowedDirs = append(allowedDirs, config.AllowedDir)
-	}
-	if strings.TrimSpace(config.AllowedDir) != "" {
 		// When -allowed_dir is set, also allow the skills directories so the model can
 		// read SKILL.md and run scripts shipped with skills.
 		for _, dir := range config.SkillsDirs {

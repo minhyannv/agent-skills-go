@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 )
 
@@ -35,7 +36,7 @@ func runCommand(command string, args []string, workingDir string, timeout time.D
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, command, args...)
-	cmd.Env = os.Environ()
+	cmd.Env = sanitizedEnv()
 	if workingDir != "" {
 		cmd.Dir = workingDir
 	}
@@ -93,4 +94,33 @@ func runCommand(command string, args []string, workingDir string, timeout time.D
 		DurationMs: duration,
 		Error:      errText,
 	}
+}
+
+// sanitizedEnv keeps only low-risk environment variables for subprocesses.
+func sanitizedEnv() []string {
+	allowedPrefixes := []string{
+		"PATH=",
+		"HOME=",
+		"USER=",
+		"LOGNAME=",
+		"SHELL=",
+		"TMPDIR=",
+		"TMP=",
+		"TEMP=",
+		"LANG=",
+		"LC_",
+		"TERM=",
+		"PWD=",
+	}
+
+	env := make([]string, 0, len(allowedPrefixes))
+	for _, kv := range os.Environ() {
+		for _, prefix := range allowedPrefixes {
+			if strings.HasPrefix(kv, prefix) {
+				env = append(env, kv)
+				break
+			}
+		}
+	}
+	return env
 }

@@ -31,6 +31,12 @@ func TestValidatePath(t *testing.T) {
 			wantErr:    true,
 		},
 		{
+			name:       "filename containing double dots is valid",
+			path:       "a..b.txt",
+			allowedDir: allowedDir,
+			wantErr:    false,
+		},
+		{
 			name:       "empty path",
 			path:       "",
 			allowedDir: allowedDir,
@@ -200,19 +206,30 @@ func TestToolRunShellSecurity(t *testing.T) {
 	}
 	shellTool := &RunShellTool{ctx: toolCtx}
 
-	// Test dangerous command
-	args := `{"command":"rm -rf /tmp/test"}`
-	resp, err := shellTool.Execute(args)
-	if err != nil {
-		t.Fatalf("runShell returned error: %v", err)
+	tests := []struct {
+		name    string
+		command string
+	}{
+		{name: "dangerous command blocked", command: "rm -rf /tmp/test"},
+		{name: "shell executable blocked", command: "bash -lc 'echo hello'"},
+		{name: "shell operator blocked", command: "echo hello; rm -rf /tmp/test"},
 	}
 
-	var result toolResponseTest
-	if err := json.Unmarshal([]byte(resp), &result); err != nil {
-		t.Fatalf("unmarshal response: %v", err)
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			args := `{"command":"` + tt.command + `"}`
+			resp, err := shellTool.Execute(args)
+			if err != nil {
+				t.Fatalf("runShell returned error: %v", err)
+			}
 
-	if result.OK {
-		t.Error("expected dangerous command to be blocked, but it succeeded")
+			var result toolResponseTest
+			if err := json.Unmarshal([]byte(resp), &result); err != nil {
+				t.Fatalf("unmarshal response: %v", err)
+			}
+			if result.OK {
+				t.Errorf("expected command to be blocked, command=%q", tt.command)
+			}
+		})
 	}
 }

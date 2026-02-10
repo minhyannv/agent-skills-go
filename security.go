@@ -44,7 +44,7 @@ func validatePathWithAllowedDirs(path string, allowedDirs []string) (string, err
 	cleanPath := filepath.Clean(path)
 
 	// Check for path traversal attempts
-	if strings.Contains(cleanPath, "..") {
+	if hasParentTraversal(cleanPath) {
 		return "", fmt.Errorf("path traversal not allowed: %s", path)
 	}
 
@@ -69,6 +69,19 @@ func validatePathWithAllowedDirs(path string, allowedDirs []string) (string, err
 	}
 
 	return "", fmt.Errorf("path outside allowed directories: %s (allowed: %s)", absPath, strings.Join(roots, ", "))
+}
+
+// hasParentTraversal reports whether a path contains a parent directory segment.
+func hasParentTraversal(cleanPath string) bool {
+	if cleanPath == ".." {
+		return true
+	}
+	for _, part := range strings.Split(cleanPath, string(filepath.Separator)) {
+		if part == ".." {
+			return true
+		}
+	}
+	return false
 }
 
 // validatePath ensures a path is safe and within allowed directory.
@@ -98,36 +111,95 @@ func validateWorkingDirWithAllowedDirs(workingDir string, allowedDirs []string) 
 }
 
 // dangerousCommands is a list of commands that should be restricted.
-var dangerousCommands = []string{
-	"rm", "rmdir", "dd", "mkfs", "fdisk", "shutdown", "reboot", "halt",
-	"poweroff", "init", "killall", "kill", "pkill", "killall5",
-	"chmod", "chown", "chgrp", "mount", "umount", "mkfs", "fdisk",
-	"parted", "sfdisk", "wipefs", "mkfs.ext", "mkfs.vfat", "mkfs.ntfs",
+var dangerousCommands = map[string]struct{}{
+	"rm":         {},
+	"rmdir":      {},
+	"dd":         {},
+	"mkfs":       {},
+	"fdisk":      {},
+	"shutdown":   {},
+	"reboot":     {},
+	"halt":       {},
+	"poweroff":   {},
+	"init":       {},
+	"killall":    {},
+	"kill":       {},
+	"pkill":      {},
+	"killall5":   {},
+	"chmod":      {},
+	"chown":      {},
+	"chgrp":      {},
+	"mount":      {},
+	"umount":     {},
+	"parted":     {},
+	"sfdisk":     {},
+	"wipefs":     {},
+	"mkfs.ext":   {},
+	"mkfs.vfat":  {},
+	"mkfs.ntfs":  {},
+	"mkfs.ext2":  {},
+	"mkfs.ext3":  {},
+	"mkfs.ext4":  {},
+	"mkfs.xfs":   {},
+	"mkfs.btrfs": {},
+}
+
+// shellExecutables are blocked to prevent nested shell execution.
+var shellExecutables = map[string]struct{}{
+	"sh":   {},
+	"bash": {},
+	"zsh":  {},
+	"dash": {},
+	"fish": {},
 }
 
 // isDangerousCommand checks if a command is potentially dangerous.
 func isDangerousCommand(cmd string) bool {
-	if cmd == "" {
+	executable, ok := firstExecutableFromCommand(cmd)
+	if !ok {
 		return false
 	}
+	return isDangerousExecutable(executable)
+}
 
-	// Split command into parts
-	parts := strings.Fields(cmd)
-	if len(parts) == 0 {
+// firstExecutableFromCommand parses a command line and returns its executable.
+func firstExecutableFromCommand(cmd string) (string, bool) {
+	args, err := parseCommandLine(cmd)
+	if err != nil || len(args) == 0 {
+		return "", false
+	}
+	return args[0], true
+}
+
+// isDangerousExecutable checks whether an executable name is in the deny list.
+func isDangerousExecutable(executable string) bool {
+	baseCmd := strings.ToLower(filepath.Base(strings.TrimSpace(executable)))
+	if baseCmd == "" {
 		return false
 	}
+	_, blocked := dangerousCommands[baseCmd]
+	return blocked
+}
 
-	// Get the base command name (first part)
-	baseCmd := filepath.Base(parts[0])
+// isShellExecutable reports whether executable is a shell interpreter.
+func isShellExecutable(executable string) bool {
+	baseCmd := strings.ToLower(filepath.Base(strings.TrimSpace(executable)))
+	if baseCmd == "" {
+		return false
+	}
+	_, isShell := shellExecutables[baseCmd]
+	return isShell
+}
 
-	// Check against dangerous commands list
-	for _, dangerous := range dangerousCommands {
-		if baseCmd == dangerous {
-			return true
+// containsBlockedShellSyntax checks for shell control operators and expansions.
+func containsBlockedShellSyntax(command string) (string, bool) {
+	blocked := []string{"&&", "||", ";", "|", ">", "<", "`", "$(", "\n", "\r"}
+	for _, token := range blocked {
+		if strings.Contains(command, token) {
+			return token, true
 		}
 	}
-
-	return false
+	return "", false
 }
 
 // validateFileExists checks if a file exists and is not a directory.
@@ -140,4 +212,51 @@ func validateFileExists(path string) error {
 		return fmt.Errorf("path is a directory: %s", path)
 	}
 	return nil
+}
+
+// parseCommandLine parses a command string into argv without shell execution.
+func parseCommandLine(input string) ([]string, error) {
+	var (
+		args     []string
+		current  strings.Builder
+		inSingle bool
+		inDouble bool
+		escaped  bool
+	)
+
+	flush := func() {
+		if current.Len() == 0 {
+			return
+		}
+		args = append(args, current.String())
+		current.Reset()
+	}
+
+	for _, r := range input {
+		switch {
+		case escaped:
+			current.WriteRune(r)
+			escaped = false
+		case r == '\\' && !inSingle:
+			escaped = true
+		case r == '\'' && !inDouble:
+			inSingle = !inSingle
+		case r == '"' && !inSingle:
+			inDouble = !inDouble
+		case (r == ' ' || r == '\t') && !inSingle && !inDouble:
+			flush()
+		default:
+			current.WriteRune(r)
+		}
+	}
+
+	if escaped {
+		return nil, fmt.Errorf("unterminated escape in command")
+	}
+	if inSingle || inDouble {
+		return nil, fmt.Errorf("unterminated quote in command")
+	}
+	flush()
+
+	return args, nil
 }

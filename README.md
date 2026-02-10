@@ -8,8 +8,7 @@ tools. It reads skill documentation from `SKILL.md`, runs approved scripts, and 
 - Interactive terminal chat loop with tool calling
 - Skill discovery via `SKILL.md` front matter
 - Built-in tools: `read_file`, `write_file`, `run_shell`
-- Command execution via `run_shell`
-- Security controls: path validation, allowed directories, dangerous command filtering
+- Security controls: path validation, allowed directories, and command hardening
 - Configurable via env vars and CLI flags
 - Optional streaming and verbose logging
 
@@ -45,7 +44,7 @@ OPENAI_BASE_URL=https://api.openai.com/v1  # optional
 go run . -skills_dirs ./skills,../shared-skills
 ```
 
-You will enter interactive mode:
+The CLI starts an interactive REPL session:
 
 ```
 === Agent Skills Go - Interactive Mode ===
@@ -68,7 +67,7 @@ Type your message and press Enter. Commands:
 | `-max_turns`   | Max tool-call turns per user message                        | `10`       |
 | `-stream`      | Stream assistant output                                     | `false`    |
 | `-verbose`     | Verbose logging (startup config, skills, tools, chat loop)  | `false`    |
-| `-allowed_dir` | Base directory for file operations (empty = no restriction) | ``         |
+| `-allowed_dir` | Base directory for file operations (set empty to disable restriction) | `current working directory` |
 
 ### Environment variables
 
@@ -129,7 +128,7 @@ Arguments:
 
 ### `run_shell`
 
-Run a shell command using `bash -lc`. Dangerous commands are blocked.
+Run a command directly (no `bash -lc`, no shell expansion). Dangerous executables are blocked.
 
 Arguments:
 
@@ -140,26 +139,18 @@ Arguments:
 Notes:
 
 - Default timeout is 60 seconds when `timeout_seconds` is not set or <= 0.
-- If `-allowed_dir` is set, `working_dir` must be inside an allowed directory.
+- By default, `working_dir` must be inside the current working directory.
+- Set `-allowed_dir=""` to disable directory restriction.
+- Shell control syntax like `;`, `|`, `&&`, redirection, and command substitution is blocked.
+- Shell interpreters (`sh`, `bash`, `zsh`, etc.) are blocked to prevent nested shell execution.
 
 ## Security Model
 
 - **Path validation** blocks traversal attempts (e.g., `../`).
-- **Allowed directories**: if `-allowed_dir` is set, all file and working directory operations must stay within that
-  directory. The skills directories are also allowed so `SKILL.md` and skill scripts can be read or executed.
-- **Dangerous command filtering** blocks destructive commands like `rm`, `dd`, and `mkfs`.
-
-## Architecture
-
-Key packages:
-
-- `main.go`: entrypoint
-- `config.go`: config loading and flags
-- `app.go`: initialization and tool wiring
-- `prompt.go`: system prompt construction
-- `skills.go`: skill discovery and parsing
-- `tools_*.go`: tool implementations
-- `security.go`: safety checks
+- **Allowed directories**: by default, file and working directory operations are restricted to the current working
+  directory. If `-allowed_dir` is set, that directory is used. Skills directories are also allowed so `SKILL.md` and
+  skill scripts can be read or executed. Set `-allowed_dir=""` to disable directory restriction.
+- **Command hardening** blocks destructive executables, shell control syntax, and nested shell interpreters.
 
 ## Development
 

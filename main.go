@@ -2,6 +2,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 )
@@ -16,9 +17,10 @@ func main() {
 	// Initialize application
 	app, err := NewApp(config)
 	if err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 
 	// Enter interactive mode
-	runInteractiveMode(app)
+	runREPL(app)
 }

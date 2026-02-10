@@ -142,3 +142,66 @@ func TestToolRunShell(t *testing.T) {
 		t.Fatalf("unexpected stdout: %q", result.Stdout)
 	}
 }
+
+// TestToolRunShellQuotes verifies quoted arguments are parsed correctly.
+func TestToolRunShellQuotes(t *testing.T) {
+	toolCtx := ToolContext{
+		MaxReadBytes: defaultMaxReadBytes,
+		Verbose:      false,
+		AllowedDirs:  nil,
+		Ctx:          context.Background(),
+	}
+	shellTool := &RunShellTool{ctx: toolCtx}
+	args := `{"command":"echo \"hello world\""}`
+
+	resp, err := shellTool.Execute(args)
+	if err != nil {
+		t.Fatalf("runShell: %v", err)
+	}
+	var toolResp toolResponseTest
+	if err := json.Unmarshal([]byte(resp), &toolResp); err != nil {
+		t.Fatalf("unmarshal response: %v", err)
+	}
+	if !toolResp.OK {
+		t.Fatalf("runShell failed: %s", toolResp.Err)
+	}
+	var result commandResult
+	if err := json.Unmarshal(toolResp.Data, &result); err != nil {
+		t.Fatalf("unmarshal command result: %v", err)
+	}
+	if !strings.Contains(result.Stdout, "hello world") {
+		t.Fatalf("unexpected stdout: %q", result.Stdout)
+	}
+}
+
+// TestToolRunShellSanitizedEnv ensures sensitive env vars are not inherited by subprocesses.
+func TestToolRunShellSanitizedEnv(t *testing.T) {
+	t.Setenv("OPENAI_API_KEY", "secret-for-test")
+	toolCtx := ToolContext{
+		MaxReadBytes: defaultMaxReadBytes,
+		Verbose:      false,
+		AllowedDirs:  nil,
+		Ctx:          context.Background(),
+	}
+	shellTool := &RunShellTool{ctx: toolCtx}
+	args := `{"command":"env"}`
+
+	resp, err := shellTool.Execute(args)
+	if err != nil {
+		t.Fatalf("runShell: %v", err)
+	}
+	var toolResp toolResponseTest
+	if err := json.Unmarshal([]byte(resp), &toolResp); err != nil {
+		t.Fatalf("unmarshal response: %v", err)
+	}
+	if !toolResp.OK {
+		t.Fatalf("runShell failed: %s", toolResp.Err)
+	}
+	var result commandResult
+	if err := json.Unmarshal(toolResp.Data, &result); err != nil {
+		t.Fatalf("unmarshal command result: %v", err)
+	}
+	if strings.Contains(result.Stdout, "OPENAI_API_KEY=secret-for-test") {
+		t.Fatalf("sensitive env variable leaked to subprocess")
+	}
+}

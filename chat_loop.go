@@ -88,9 +88,9 @@ func runChatOnce(ctx context.Context, client openai.Client, params openai.ChatCo
 	return acc.Choices[0].Message, streamed, nil
 }
 
-// runInteractiveChatLoop runs a chat loop with existing message history.
+// runChatLoop runs a chat loop with existing message history.
 // Returns updated messages, result, and error.
-func runInteractiveChatLoop(ctx context.Context, client openai.Client, model openai.ChatModel, messages []openai.ChatCompletionMessageParamUnion, tools *Tools, maxTurns int, stream bool, verbose bool) ([]openai.ChatCompletionMessageParamUnion, ChatLoopResult, error) {
+func runChatLoop(ctx context.Context, client openai.Client, model openai.ChatModel, messages []openai.ChatCompletionMessageParamUnion, tools *Tools, maxTurns int, stream bool, verbose bool) ([]openai.ChatCompletionMessageParamUnion, ChatLoopResult, error) {
 	if maxTurns <= 0 {
 		maxTurns = 1
 	}

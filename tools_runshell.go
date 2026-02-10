@@ -26,13 +26,13 @@ func (t *RunShellTool) Definition() openai.ChatCompletionToolParam {
 	return openai.ChatCompletionToolParam{
 		Function: openai.FunctionDefinitionParam{
 			Name:        "run_shell",
-			Description: openai.String("Run a shell command using bash"),
+			Description: openai.String("Run a command without shell expansion"),
 			Parameters: openai.FunctionParameters{
 				"type": "object",
 				"properties": map[string]any{
 					"command": map[string]any{
 						"type":        "string",
-						"description": "Shell command to run.",
+						"description": "Command to run.",
 					},
 					"working_dir": map[string]any{
 						"type":        "string",
@@ -68,6 +68,17 @@ func (t *RunShellTool) Execute(argText string) (string, error) {
 	if args.Command == "" {
 		return marshalToolResponse("run_shell", nil, errors.New("command is required"))
 	}
+	if blockedToken, blocked := containsBlockedShellSyntax(args.Command); blocked {
+		return marshalToolResponse("run_shell", nil, fmt.Errorf("shell control syntax not allowed: %q", blockedToken))
+	}
+
+	argv, err := parseCommandLine(args.Command)
+	if err != nil {
+		return marshalToolResponse("run_shell", nil, fmt.Errorf("invalid command: %w", err))
+	}
+	if len(argv) == 0 {
+		return marshalToolResponse("run_shell", nil, errors.New("command is required"))
+	}
 
 	// Validate working directory
 	validatedWorkingDir, err := validateWorkingDirWithAllowedDirs(args.WorkingDir, t.ctx.AllowedDirs)
@@ -79,15 +90,17 @@ func (t *RunShellTool) Execute(argText string) (string, error) {
 	}
 
 	timeout := time.Duration(args.TimeoutSeconds) * time.Second
-	command := args.Command
-	if isDangerousCommand(command) {
+	if isShellExecutable(argv[0]) {
+		return marshalToolResponse("run_shell", nil, fmt.Errorf("shell executables are not allowed: %s", argv[0]))
+	}
+	if isDangerousExecutable(argv[0]) {
 		if t.ctx.Verbose {
-			log.Printf("[verbose] run_shell: dangerous command blocked: %s", command)
+			log.Printf("[verbose] run_shell: dangerous command blocked: %s", argv[0])
 		}
-		return marshalToolResponse("run_shell", nil, fmt.Errorf("dangerous command not allowed: %s", command))
+		return marshalToolResponse("run_shell", nil, fmt.Errorf("dangerous command not allowed: %s", argv[0]))
 	}
 
-	result := runCommand("bash", []string{"-lc", command}, validatedWorkingDir, timeout, t.ctx.Verbose)
+	result := runCommand(argv[0], argv[1:], validatedWorkingDir, timeout, t.ctx.Verbose)
 	if t.ctx.Verbose {
 		log.Printf("[verbose] run_shell: completed, exit_code=%d, duration=%dms", result.ExitCode, result.DurationMs)
 	}

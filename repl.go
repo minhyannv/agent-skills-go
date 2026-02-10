@@ -11,8 +11,8 @@ import (
 	"github.com/openai/openai-go"
 )
 
-// runInteractiveMode runs an interactive chat session.
-func runInteractiveMode(app *App) {
+// runREPL runs an interactive chat session.
+func runREPL(app *App) {
 	if app.Config.Verbose {
 		log.Printf("[verbose] interactive mode start: model=%s stream=%v max_turns=%d", app.Config.OpenAIModel, app.Config.Stream, app.Config.MaxTurns)
 	}
@@ -50,7 +50,7 @@ func runInteractiveMode(app *App) {
 		messages = append(messages, openai.UserMessage(input))
 
 		// Run chat loop with current history
-		updatedMessages, result, err := runInteractiveChatLoop(
+		updatedMessages, result, err := runChatLoop(
 			app.Ctx,
 			app.Client,
 			app.Config.OpenAIModel,

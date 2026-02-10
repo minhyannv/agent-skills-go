@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"os"
 
@@ -93,7 +94,25 @@ func (t *ReadFileTool) Execute(argText string) (string, error) {
 		log.Printf("[verbose] read_file: file size=%d bytes", info.Size())
 	}
 
-	data, err := os.ReadFile(validatedPath)
+	maxBytes := args.MaxBytes
+	if maxBytes <= 0 {
+		maxBytes = t.ctx.MaxReadBytes
+	}
+	if maxBytes <= 0 {
+		return marshalToolResponse("read_file", nil, errors.New("max_bytes must be greater than 0"))
+	}
+
+	file, err := os.Open(validatedPath)
+	if err != nil {
+		if t.ctx.Verbose {
+			log.Printf("[verbose] read_file: open failed: %v", err)
+		}
+		return marshalToolResponse("read_file", nil, err)
+	}
+	defer func() { _ = file.Close() }()
+
+	limitedReader := io.LimitReader(file, maxBytes+1)
+	data, err := io.ReadAll(limitedReader)
 	if err != nil {
 		if t.ctx.Verbose {
 			log.Printf("[verbose] read_file: read failed: %v", err)
@@ -101,17 +120,13 @@ func (t *ReadFileTool) Execute(argText string) (string, error) {
 		return marshalToolResponse("read_file", nil, err)
 	}
 
-	maxBytes := args.MaxBytes
-	if maxBytes <= 0 {
-		maxBytes = t.ctx.MaxReadBytes
-	}
-
 	truncated := false
 	if int64(len(data)) > maxBytes {
 		truncated = true
+		originalLen := len(data)
 		data = data[:maxBytes]
 		if t.ctx.Verbose {
-			log.Printf("[verbose] read_file: truncated from %d to %d bytes", len(data), maxBytes)
+			log.Printf("[verbose] read_file: truncated from %d to %d bytes", originalLen, maxBytes)
 		}
 	}
 

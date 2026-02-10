@@ -40,7 +40,7 @@ func ParseConfig() *Config {
 		maxTurns   = flag.Int("max_turns", 10, "Max tool-call turns")
 		stream     = flag.Bool("stream", false, "Stream assistant output")
 		verbose    = flag.Bool("verbose", false, "Verbose tool-call logging")
-		allowedDir = flag.String("allowed_dir", "", "Base directory for file operations (empty = no restriction, recommended for security)")
+		allowedDir = flag.String("allowed_dir", defaultAllowedDir(), "Base directory for file operations (default: current working directory, set empty to disable restriction)")
 	)
 	flag.Parse()
 
@@ -49,11 +49,19 @@ func ParseConfig() *Config {
 		MaxTurns:      *maxTurns,
 		Stream:        *stream,
 		Verbose:       *verbose,
-		AllowedDir:    *allowedDir,
+		AllowedDir:    strings.TrimSpace(*allowedDir),
 		OpenAIAPIKey:  apiKey,
 		OpenAIBaseURL: baseURL,
 		OpenAIModel:   model,
 	}
+}
+
+func defaultAllowedDir() string {
+	wd, err := os.Getwd()
+	if err != nil {
+		return "."
+	}
+	return wd
 }
 
 func parseSkillsDirs(value string) []string {
