@@ -3,27 +3,32 @@
 Agent Skills Go is a skill-aware AI agent framework in Go.
 
 It provides:
-- A reusable core library: `pkg/agentskills`
+- A reusable core library split by responsibility: `pkg/agent`, `pkg/config`, `pkg/logger`, `pkg/prompt`, `pkg/skills`, `pkg/tools`
 - A local CLI adapter: `cmd/agent-skills-go`
 
 The core library focuses on programmatic integration. The CLI is just one way to run it.
 
 ## Highlights
 
-- Library-first architecture (`New` + `Chat`)
+- Library-first architecture (`New` + `Run`)
 - Skill discovery from local `SKILL.md` files
 - Built-in tools: `read_file`, `write_file`, `run_shell`
-- Streaming and non-streaming chat support
+- Non-streaming agent loop with tool-calling
+- Logger dependency injection via `agent.WithLogger(...)`
 - Security controls for filesystem and shell execution
-- CLI kept separate from core logic
+- Single-file CLI implementation for easier maintenance
 
 ## Project Layout
 
 ```text
-cmd/agent-skills-go/          # CLI entry and adapters
-cmd/agent-skills-go/repl.go   # REPL adapter
+cmd/agent-skills-go/main.go   # Single-file CLI (flags + REPL + entrypoint)
 
-pkg/agentskills/              # Core reusable library
+pkg/agent/                    # AgentLoop orchestration + agent loop
+pkg/config/                   # Runtime configuration model
+pkg/logger/                   # Logging interface + implementations
+pkg/prompt/                   # System prompt composition
+pkg/skills/                   # Skill discovery + metadata parsing
+pkg/tools/                    # Built-in tools + security execution
 ```
 
 ## Quick Start (CLI)
@@ -60,6 +65,14 @@ go run ./cmd/agent-skills-go
 # go run ./cmd/agent-skills-go -skills_dirs ./skills -skills_dirs ../shared-skills
 ```
 
+By default, the CLI auto-loads these built-in skills when present:
+- `skills/.system/skill-creator`
+- `skills/.system/skill-installer`
+
+When `skill-installer` installs a new skill, it writes to:
+- `$CODEX_HOME/skills/<skill-name>`
+- defaults to `~/.codex/skills/<skill-name>` when `CODEX_HOME` is unset
+
 ## Use as a Library
 
 Install:  
@@ -78,41 +91,42 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/minhyannv/agent-skills-go/pkg/agentskills"
+	"github.com/minhyannv/agent-skills-go/pkg/agent"
+	configpkg "github.com/minhyannv/agent-skills-go/pkg/config"
+	loggerpkg "github.com/minhyannv/agent-skills-go/pkg/logger"
 )
 
 func main() {
-	cfg := agentskills.DefaultConfig()
+	cfg := configpkg.DefaultConfig()
 	cfg.SkillsDirs = []string{"./skills"} // optional
 	cfg.APIKey = "your_api_key_here"
 	cfg.Model = "gpt-4o-mini"
 	cfg.BaseURL = "https://api.openai.com/v1"
 	cfg.Verbose = true
-	cfg.Logger = agentskills.NewWriterLogger(os.Stderr)
 
-	app, err := agentskills.New(context.Background(), cfg)
+	app, err := agent.New(
+		context.Background(),
+		cfg,
+		agent.WithLogger(loggerpkg.NewWriterLogger(os.Stderr)),
+	)
 	if err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "init failed: %v\n", err)
 		os.Exit(1)
 	}
 
-	messages := []agentskills.Message{
-		{Role: agentskills.RoleUser, Content: "Summarize this repository."},
-	}
-
-	result, err := app.Chat(messages, agentskills.ChatOptions{
-		Stream: false,
-	})
+	finalMessage, err := app.Run("Summarize this repository.")
 	if err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "chat failed: %v\n", err)
 		os.Exit(1)
 	}
 
-	fmt.Println(result.Content)
-	messages = result.Messages // carry forward conversation history
-	_ = messages
+	fmt.Println(finalMessage.Content)
 }
 ```
+
+Notes:
+- `Run` accepts a single user input string and returns one final assistant message.
+- Conversation history is stored inside `AgentLoop`; call `app.Reset()` to clear it.
 
 ## Skills
 
@@ -174,8 +188,7 @@ Arguments:
 | Flag | Description | Default |
 |------|-------------|---------|
 | `-skills_dirs` | Skill directory; repeat flag for multiple paths (comma-separated values are not supported) | empty (no skills loaded) |
-| `-max_turns` | Max tool-call turns per message | `10` |
-| `-stream` | Stream assistant output | `false` |
+| `-max_turns` | Max internal tool-call iterations per user input | `10` |
 | `-verbose` | Verbose logging | `false` |
 | `-allowed_dir` | Base directory for file operations (`""` disables restriction) | current working directory |
 
